@@ -25,6 +25,7 @@
     "@whi/holo-hash": "^0.4.2",
     "@whi/holochain-websocket": "^0.1.4",
     "@whi/weblogger": "^0.1.6",
+    "js-sha512": "^0.8.0",
     "ws": "^8.0.0"
   },
   "devDependencies": {
