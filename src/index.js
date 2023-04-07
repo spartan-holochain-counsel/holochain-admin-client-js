@@ -628,6 +628,10 @@ export class AdminClient {
 set_tostringtag( AdminClient, "AdminClient" );
 
 
+export function logging () {
+    log.debug				= true;
+}
+
 export default {
     AdminClient,
 

@@ -41,7 +41,7 @@ async function create_page ( url ) {
 }
 
 
-function connection_tests () {
+function basic_tests () {
     it("should make request using AdminClient", async function () {
 	let result			= await page.evaluate(async function ( admin_port ) {
 	    const admin			= new AdminClient( admin_port );
@@ -80,7 +80,7 @@ describe("E2E: Holochain Admin Client", () => {
 	page				= await create_page( test_url );
     });
 
-    describe("AdminClient",	connection_tests );
+    describe("AdminClient",		basic_tests );
 
     after(async () => {
 	await conductor.destroy();

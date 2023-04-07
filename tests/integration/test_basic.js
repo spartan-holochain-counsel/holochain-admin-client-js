@@ -8,14 +8,19 @@ import { expect }			from 'chai';
 import nacl				from 'tweetnacl';
 
 import { Holochain }			from '@whi/holochain-backdrop';
-import { HoloHash,
-	 AgentPubKey }			from '@whi/holo-hash';
 import json				from '@whi/json';
 
 import { expect_reject }		from './utils.js';
 
 import HolochainAdminClient		from '../../src/index.js';
-import { AdminClient }			from '../../src/index.js';
+import {
+    AdminClient,
+
+    HoloHash,
+    AgentPubKey,
+
+    ConductorError,
+}					from '../../src/index.js';
 
 
 const TEST_DNA_PATH			= new URL( "../packs/memory.dna", import.meta.url ).pathname;
@@ -293,27 +298,27 @@ function errors_tests () {
     it("should call admin API method with invalid args", async function () {
 	await expect_reject( async () => {
 	    await admin.attachAppInterface( 1 );
-	}, HolochainAdminClient.ConductorError, "Permission denied" );
+	}, ConductorError, "Permission denied" );
     });
 
     it("should fail to add admin interface", async function () {
 	await expect_reject( async () => {
 	    await admin.addAdminInterface( app_port );
-	}, HolochainAdminClient.ConductorError, "Address already in us" );
+	}, ConductorError, "Address already in us" );
     });
 
     // register: non-existent DNA path
     it("should fail to register because bad path", async function () {
 	await expect_reject( async () => {
 	    await admin.registerDna( "./non-existent.dna" );
-	}, HolochainAdminClient.ConductorError, "No such file or directory" );
+	}, ConductorError, "No such file or directory" );
     });
 
     // activate: non-existent app ID
     it("should fail to enable because invalid app ID", async function () {
 	await expect_reject( async () => {
 	    await admin.enableApp( "invalid-app-id" );
-	}, HolochainAdminClient.ConductorError, "AppNotInstalled" );
+	}, ConductorError, "AppNotInstalled" );
     });
 
     it("should fail to create cap grant because bad input", async function () {
