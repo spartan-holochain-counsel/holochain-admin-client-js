@@ -12,6 +12,14 @@ API.
 
 See [docs/API.md](docs/API.md) for detailed API References
 
+### `logging()`
+Turns on debugging logs.
+
+```javascript
+import { logging } from '@whi/holochain-admin-client';
+
+logging(); // show debug logs
+```
 
 ### Environment
 

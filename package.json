@@ -4,7 +4,8 @@
   "description": "A Javascript client for communicating with Holochain's Admin Interface API",
   "type": "module",
   "main": "src/index.js",
-  "browser": "dist/holochain-admin-client.min.js",
+  "module": "src/index.js",
+  "browser": "dist/holochain-admin-client.js",
   "files": [
     "README.md",
     "src/index.js",
@@ -22,8 +23,8 @@
     "url": "https://github.com/mjbrisebois/holochain-admin-client-js/"
   },
   "dependencies": {
-    "@whi/holo-hash": "^0.4.2",
-    "@whi/holochain-websocket": "^0.1.4",
+    "@whi/holo-hash": "^0.4.3",
+    "@whi/holochain-websocket": "^0.1.5",
     "@whi/weblogger": "^0.1.6",
     "js-sha512": "^0.8.0",
     "ws": "^8.0.0"
