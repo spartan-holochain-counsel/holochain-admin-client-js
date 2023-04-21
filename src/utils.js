@@ -1,5 +1,5 @@
 
-import { MsgPack }			from '@whi/holochain-websocket';
+import { decode }			from '@msgpack/msgpack';
 import { DnaHash,
 	 AgentPubKey }			from '@whi/holo-hash';
 
@@ -64,7 +64,7 @@ export async function reformat_app_info ( app_info ) {
 	delete role.clone_id;
 
 	// `dna_modifiers` is always there whether it's provisioned or stem
-	role.dna_modifiers.properties	= MsgPack.decode( role.dna_modifiers.properties );
+	role.dna_modifiers.properties	= decode( role.dna_modifiers.properties );
 
 	for ( let cell of cells ) {
 	    if ( cell.cloned ) {

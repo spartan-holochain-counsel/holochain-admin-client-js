@@ -1,43 +1,14 @@
 
-import sha512				from 'js-sha512';
 import {
     HoloHash,
-    HoloHashTypes,
-    AnyDhtHash,
-
     AgentPubKey,
     EntryHash,
-    NetIdHash,
-    DhtOpHash,
     ActionHash,
-    DnaWasmHash,
     DnaHash,
-
-    Warning,
-    HoloHashError,
-    NoLeadingUError,
-    BadBase64Error,
-    BadSizeError,
-    BadPrefixError,
-    BadChecksumError,
 }					from '@whi/holo-hash';
-import HoloHashes			from '@whi/holo-hash';
+import { decode }			from '@msgpack/msgpack';
 import {
     Connection,
-
-    PromiseTimeout,
-    TimeoutError,
-
-    HolochainClientError,
-    ConductorError,
-    DeserializationError,
-    DnaReadError,
-    RibosomeError,
-    RibosomeDeserializeError,
-    ActivateAppError,
-    ZomeCallUnauthorizedError,
-
-    MsgPack,
 }					from '@whi/holochain-websocket';
 import HolochainWebsocket		from '@whi/holochain-websocket';
 
@@ -50,50 +21,20 @@ import { DeprecationNotice }		from './errors.js';
 
 export {
     DeprecationNotice,
-    sha512,
 
-    // Forwarded from @whi/holochain-websocket
-    Connection,
-
-    PromiseTimeout,
-    TimeoutError,
-
-    HolochainClientError,
-    ConductorError,
-    DeserializationError,
-    DnaReadError,
-    RibosomeError,
-    RibosomeDeserializeError,
-    ActivateAppError,
-    ZomeCallUnauthorizedError,
-
-    MsgPack,
-
-    // Forwarded from @whi/holo-hash
-    HoloHash,
-    HoloHashTypes,
-    AnyDhtHash,
-
-    AgentPubKey,
-    EntryHash,
-    NetIdHash,
-    DhtOpHash,
-    ActionHash,
-    DnaWasmHash,
-    DnaHash,
-
-    Warning,
-    HoloHashError,
-    NoLeadingUError,
-    BadBase64Error,
-    BadSizeError,
-    BadPrefixError,
-    BadChecksumError,
+    // Sub-package from @whi/holochain-websocket
+    HolochainWebsocket,
 };
 
+export async function sha512 ( bytes ) {
+    if ( typeof crypto === "undefined" || !crypto.subtle )
+	throw new Error(`SubtleCrypto (window.crypto.subtle) is required by @whi/holochain-admin-client for hashing cap secrets.`);
 
-function hash_secret ( secret ) {
-    return new Uint8Array( sha512.digest( secret ) );
+    return await crypto.subtle.digest("SHA-512", bytes );
+}
+
+async function hash_secret ( secret ) {
+    return new Uint8Array( await sha512( secret ) );
 }
 
 function deprecation_notice ( msg ) {
@@ -451,7 +392,7 @@ export class AdminClient {
 		record.action.entry_hash	= new EntryHash(   new Uint8Array(record.action.entry_hash) );
 		try {
 		    const length		= record.entry.entry.length;
-		    record.entry.entry		= MsgPack.decode( record.entry.entry );
+		    record.entry.entry		= decode( record.entry.entry );
 		    record.entry.length	= length;
 		} catch (err) {
 		    record.entry.entry		= new Uint8Array( record.entry.entry );
@@ -532,11 +473,11 @@ export class AdminClient {
 	infos.forEach( (info, i) => {
 	    info.agent			= new AgentPubKey( info.agent );
 	    info.signature		= new Uint8Array( info.signature );
-	    info.agent_info		= MsgPack.decode( info.agent_info );
+	    info.agent_info		= decode( info.agent_info );
 
 	    info.agent_info.agent	= new Uint8Array( info.agent_info.agent );
 	    info.agent_info.space	= new Uint8Array( info.agent_info.space );
-	    info.agent_info.meta_info	= MsgPack.decode( info.agent_info.meta_info );
+	    info.agent_info.meta_info	= decode( info.agent_info.meta_info );
 	});
 
 	log.debug && log("Infos (%s): %s", infos.length, infos );
@@ -572,7 +513,7 @@ export class AdminClient {
     async grantTransferableCapability ( tag, agent, dna, functions, secret ) {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
-	    secret			= hash_secret( secret );
+	    secret			= await hash_secret( secret );
 
 	const input			= {
 	    "cell_id": [ dna, agent ],
@@ -595,7 +536,7 @@ export class AdminClient {
     async grantAssignedCapability ( tag, agent, dna, functions, secret, agents ) {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
-	    secret			= hash_secret( secret );
+	    secret			= await hash_secret( secret );
 
 	const input			= {
 	    "cell_id": [ dna, agent ],
@@ -634,14 +575,9 @@ export function logging () {
 
 export default {
     AdminClient,
+    DeprecationNotice,
+    sha512,
 
     // Sub-package from @whi/holochain-websocket
     HolochainWebsocket,
-    MsgPack,
-
-    PromiseTimeout,
-    TimeoutError,
-
-    // Sub-package from @whi/holo-hash
-    HoloHashes,
 };

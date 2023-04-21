@@ -609,41 +609,6 @@ Returns a Promise that resolves when the Connection has closed.
     sha512,
 
     // Forwarded from @whi/holochain-websocket
-    Connection,
-
-    PromiseTimeout,
-    TimeoutError,
-
-    HolochainClientError,
-    ConductorError,
-    DeserializationError,
-    DnaReadError,
-    RibosomeError,
-    RibosomeDeserializeError,
-    ActivateAppError,
-    ZomeCallUnauthorizedError,
-
-    MsgPack,
-
-    // Forwarded from @whi/holo-hash
-    HoloHash,
-    HoloHashTypes,
-    AnyDhtHash,
-
-    AgentPubKey,
-    EntryHash,
-    NetIdHash,
-    DhtOpHash,
-    ActionHash,
-    DnaWasmHash,
-    DnaHash,
-
-    Warning,
-    HoloHashError,
-    NoLeadingUError,
-    BadBase64Error,
-    BadSizeError,
-    BadPrefixError,
-    BadChecksumError,
+    HolochainWebsocket,
 }
 ```

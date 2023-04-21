@@ -12,15 +12,17 @@ import json				from '@whi/json';
 
 import { expect_reject }		from './utils.js';
 
-import HolochainAdminClient		from '../../src/index.js';
 import {
-    AdminClient,
-
     HoloHash,
     AgentPubKey,
-
+}					from '@whi/holo-hash';
+import {
+    AdminClient,
+    HolochainWebsocket,
+}					from '../../src/node.js';
+const {
     ConductorError,
-}					from '../../src/index.js';
+}					= HolochainWebsocket;
 
 
 const TEST_DNA_PATH			= new URL( "../packs/memory.dna", import.meta.url ).pathname;
@@ -88,7 +90,6 @@ function basic_tests () {
 
     it("should enable app", async function () {
 	const resp			= await admin.enableApp( TEST_APP_ID );
-
 	log.normal("Enabled app: %s", resp );
     });
 
