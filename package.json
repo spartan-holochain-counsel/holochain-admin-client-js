@@ -25,9 +25,7 @@
   },
   "dependencies": {
     "@whi/holo-hash": "^0.4.3",
-    "@whi/holochain-websocket": "^0.1.6",
-    "js-sha512": "^0.8.0",
-    "ws": "^8.0.0"
+    "@whi/holochain-websocket": "^0.1.6"
   },
   "devDependencies": {
     "@whi/holochain-backdrop": "^2.2.1",
