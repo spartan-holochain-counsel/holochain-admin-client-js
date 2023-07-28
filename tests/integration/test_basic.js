@@ -7,7 +7,7 @@ import path				from 'path';
 import { expect }			from 'chai';
 import nacl				from 'tweetnacl';
 
-import { Holochain }			from '@whi/holochain-backdrop';
+import { Holochain }			from '@spartan-hc/holochain-backdrop';
 import json				from '@whi/json';
 
 import { expect_reject }		from './utils.js';
@@ -15,7 +15,7 @@ import { expect_reject }		from './utils.js';
 import {
     HoloHash,
     AgentPubKey,
-}					from '@whi/holo-hash';
+}					from '@spartan-hc/holo-hash';
 import {
     AdminClient,
     HolochainWebsocket,

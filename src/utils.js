@@ -1,7 +1,7 @@
 
 import { decode }			from '@msgpack/msgpack';
 import { DnaHash,
-	 AgentPubKey }			from '@whi/holo-hash';
+	 AgentPubKey }			from '@spartan-hc/holo-hash';
 
 
 export function set_tostringtag ( cls, name ) {
@@ -41,6 +41,7 @@ export async function reformat_app_info ( app_info ) {
     // app_info.cell_info		- Map of role name to cell list
     // app_info.cell_info[ role name ]	- 1 Provisioned cell, followed by cloned or stem cells
 
+    app_info.agent_pub_key		= new AgentPubKey( app_info.agent_pub_key );
     app_info.roles			= {};
 
     for ( let [role_name, cells] of Object.entries( app_info.cell_info ) ) {
@@ -79,7 +80,7 @@ export async function reformat_app_info ( app_info ) {
 
     delete app_info.cell_info;
 
-    app_info.running			= !!app_info.status.running;
+    app_info.running			= app_info.status.running !== undefined;
 
     return app_info;
 }

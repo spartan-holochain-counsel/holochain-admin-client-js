@@ -7,7 +7,7 @@
 A class for communicating with Conductor's Admin interface.
 
 - `connection` - (*required*) either
-  - an instance of [`Connection`](https://github.com/mjbrisebois/holochain-websocket-js/blob/master/docs/API_Connection.md)
+  - an instance of [`Connection`](https://github.com/spartan-holochain-counsel/holochain-websocket-js/blob/master/docs/API_Connection.md)
   - or, it is used as the input for `new Connection( connection )`
 
 Example
@@ -608,7 +608,7 @@ Returns a Promise that resolves when the Connection has closed.
     DeprecationNotice,
     sha512,
 
-    // Forwarded from @whi/holochain-websocket
+    // Forwarded from @spartan-hc/holochain-websocket
     HolochainWebsocket,
 }
 ```

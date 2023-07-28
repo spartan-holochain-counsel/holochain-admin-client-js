@@ -10,25 +10,25 @@ node_modules:		package-lock.json
 build:			node_modules
 
 use-local-holo-hash:
-	cd tests; npm uninstall @whi/holo-hash
+	cd tests; npm uninstall @spartan-hc/holo-hash
 	cd tests; npm install --save ../../holo-hash-js/
 use-npm-holo-hash:
-	cd tests; npm uninstall @whi/holo-hash
-	cd tests; npm install --save @whi/holo-hash
+	cd tests; npm uninstall @spartan-hc/holo-hash
+	cd tests; npm install --save @spartan-hc/holo-hash
 
 use-local-websocket:
-	cd tests; npm uninstall @whi/holochain-websocket
+	cd tests; npm uninstall @spartan-hc/holochain-websocket
 	cd tests; npm install --save ../../holochain-websocket-js/
 use-npm-websocket:
-	cd tests; npm uninstall @whi/holochain-websocket
-	cd tests; npm install --save @whi/holochain-websocket
+	cd tests; npm uninstall @spartan-hc/holochain-websocket
+	cd tests; npm install --save @spartan-hc/holochain-websocket
 
 use-local-backdrop:
-	cd tests; npm uninstall @whi/holochain-backdrop
+	cd tests; npm uninstall @spartan-hc/holochain-backdrop
 	cd tests; npm install --save-dev ../../node-holochain-backdrop/
 use-npm-backdrop:
-	cd tests; npm uninstall @whi/holochain-backdrop
-	cd tests; npm install --save-dev @whi/holochain-backdrop
+	cd tests; npm uninstall @spartan-hc/holochain-backdrop
+	cd tests; npm install --save-dev @spartan-hc/holochain-backdrop
 
 
 MOCHA_OPTS		= -t 15000

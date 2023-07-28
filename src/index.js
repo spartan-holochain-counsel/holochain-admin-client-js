@@ -5,12 +5,12 @@ import {
     EntryHash,
     ActionHash,
     DnaHash,
-}					from '@whi/holo-hash';
+}					from '@spartan-hc/holo-hash';
 import { decode }			from '@msgpack/msgpack';
 import {
     Connection,
-}					from '@whi/holochain-websocket';
-import HolochainWebsocket		from '@whi/holochain-websocket';
+}					from '@spartan-hc/holochain-websocket';
+import HolochainWebsocket		from '@spartan-hc/holochain-websocket';
 
 import { log,
 	 reformat_app_info,
@@ -22,13 +22,13 @@ import { DeprecationNotice }		from './errors.js';
 export {
     DeprecationNotice,
 
-    // Sub-package from @whi/holochain-websocket
+    // Sub-package from @spartan-hc/holochain-websocket
     HolochainWebsocket,
 };
 
 export async function sha512 ( bytes ) {
     if ( typeof crypto === "undefined" || !crypto.subtle )
-	throw new Error(`SubtleCrypto (window.crypto.subtle) is required by @whi/holochain-admin-client for hashing cap secrets.`);
+	throw new Error(`SubtleCrypto (window.crypto.subtle) is required by @spartan-hc/holochain-admin-client for hashing cap secrets.`);
 
     return await crypto.subtle.digest("SHA-512", bytes );
 }
@@ -578,6 +578,6 @@ export default {
     DeprecationNotice,
     sha512,
 
-    // Sub-package from @whi/holochain-websocket
+    // Sub-package from @spartan-hc/holochain-websocket
     HolochainWebsocket,
 };
