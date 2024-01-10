@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@spartan-hc/holo-hash": "^0.5.4",
-    "@spartan-hc/holochain-websocket": "^0.1.7"
+    "@spartan-hc/holochain-websocket": "^0.3.0"
   },
   "devDependencies": {
     "@spartan-hc/holochain-backdrop": "^2.2.3",

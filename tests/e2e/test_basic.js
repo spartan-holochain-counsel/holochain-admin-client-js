@@ -71,7 +71,7 @@ describe("E2E: Holochain Admin Client", () => {
 
 	admin_port			= conductor.adminPorts()[0];
 
-	browser				= await puppeteer.launch();
+	browser				= await puppeteer.launch({ "headless": "new" });
 	server				= new http.server();
 	server.serve_local_assets( new URL( "../../", import.meta.url ).pathname );
 	server.listen( HTTP_PORT )
