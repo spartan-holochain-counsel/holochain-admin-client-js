@@ -6,7 +6,7 @@ import {
     ActionHash,
     DnaHash,
 }					from '@spartan-hc/holo-hash';
-import { decode }			from '@msgpack/msgpack';
+import { encode, decode }		from '@msgpack/msgpack';
 import {
     Connection,
 }					from '@spartan-hc/holochain-websocket';
@@ -198,6 +198,7 @@ export class AdminClient {
 	options				= Object.assign( {}, {
 	    "membrane_proofs": {},
 	    "network_seed": null, // overrite bundle DNAs
+	    "encode_membrane_proofs": true,
 	}, options );
 
 	if ( app_id === "*" )
@@ -209,6 +210,12 @@ export class AdminClient {
 	    "membrane_proofs": options.membrane_proofs,
 	    "network_seed": options.network_seed,
 	};
+
+	if ( options.encode_membrane_proofs === true ) {
+	    for ( let role in input.membrane_proofs ) {
+		input.membrane_proofs[role] = encode( input.membrane_proofs[role] );
+	    }
+	}
 
 	if ( typeof happ_bundle === "string" )
 	    input.path			= happ_bundle;
