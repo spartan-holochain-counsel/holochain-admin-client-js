@@ -207,7 +207,7 @@ export class AdminClient {
 	const input			= {
 	    "installed_app_id": app_id,
 	    "agent_key": new AgentPubKey(agent_hash),
-	    "membrane_proofs": options.membrane_proofs,
+	    "membrane_proofs": { ...options.membrane_proofs },
 	    "network_seed": options.network_seed,
 	};
 
