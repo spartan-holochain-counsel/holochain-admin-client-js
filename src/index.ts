@@ -9,6 +9,7 @@ import {
 import { encode, decode }		from '@msgpack/msgpack';
 import {
     Connection,
+    ConnectionOptions,
 }					from '@spartan-hc/holochain-websocket';
 import HolochainWebsocket		from '@spartan-hc/holochain-websocket';
 
@@ -18,13 +19,13 @@ import { log,
 	 reformat_cell_errors,
 	 set_tostringtag }		from './utils.js';
 import { DeprecationNotice }		from './errors.js';
+import {
+    Location,
+    LocationValue,
+    RegisterDnaInput,
+}					from './types';
 
-export {
-    DeprecationNotice,
 
-    // Sub-package from @spartan-hc/holochain-websocket
-    HolochainWebsocket,
-};
 
 export async function sha512 ( bytes ) {
     if ( typeof crypto === "undefined" || !crypto.subtle )
@@ -66,7 +67,7 @@ function normalize_granted_functions ( granted_functions ) {
     const functions		= [];
     for ( let zome_name in granted_functions ) {
 	if ( !Array.isArray( granted_functions[ zome_name ] ) )
-	    throw new TypeError(`Invalid granted functions object; functions must be an array, not type '${typeof fn_name}'`);
+	    throw new TypeError(`Invalid granted functions object; functions must be an array, not type '${typeof granted_functions[ zome_name ]}'`);
 
 	for ( let fn_name of granted_functions[ zome_name ] ) {
 	    if ( typeof fn_name !== "string" )
@@ -121,23 +122,27 @@ export class AdminClient {
     static APPS_STOPPED			= "Stopped";
     static APPS_PAUSED			= "Paused";
 
-    constructor ( connection, opts = {} ) {
-	this._conn_load			= new Promise(async (f,r) => {
-	    this._conn			= connection instanceof Connection
-		? port
+    #conn:		any;
+    #conn_load:		Promise<void>;
+
+    constructor ( connection, opts : ConnectionOptions = {} ) {
+	this.#conn_load			= new Promise(async (f,r) => {
+	    this.#conn			= connection instanceof Connection
+		? connection
 		: new Connection( connection, { "name": "admin", ...opts });
 	    f();
 	});
     }
 
     async connection () {
-	await this._conn_load;
-	return this._conn;
+	await this.#conn_load;
+	return this.#conn;
     }
 
-    async _request ( ...args ) {
+    async #request ( ...args ) {
 	const conn			= await this.connection();
-	if ( conn._opened === false ) {
+
+	if ( conn.opened === false ) {
 	    log.debug && log("Opening connection '%s' for AdminClient", conn.name );
 	    await conn.open();
 	}
@@ -146,7 +151,7 @@ export class AdminClient {
     }
 
     async attachAppInterface ( port ) {
-	let resp			= await this._request("attach_app_interface", {
+	let resp			= await this.#request("attach_app_interface", {
 	    "port": port,
 	});
 	return resp;
@@ -157,7 +162,7 @@ export class AdminClient {
     }
 
     async addAdminInterfaces ( ...ports ) {
-	let resp			= await this._request("add_admin_interfaces", ports.map( port => {
+	let resp			= await this.#request("add_admin_interfaces", ports.map( port => {
 	    return {
 		"driver": {
 		    "type": "websocket",
@@ -171,10 +176,10 @@ export class AdminClient {
     }
 
     async generateAgent () {
-	return new AgentPubKey( await this._request("generate_agent_pub_key") );
+	return new AgentPubKey( await this.#request("generate_agent_pub_key") );
     }
 
-    async registerDna ( path, modifiers ) {
+    async registerDna ( path: LocationValue, modifiers: any ) {
 	modifiers			= Object.assign( {}, {
 	    "network_seed": null, // String
 	    "properties": null, // Object or msgpacked bytes?
@@ -182,16 +187,16 @@ export class AdminClient {
 	    "quantum_time": null, // Duration
 	}, modifiers );
 
-	let input			= {
+	let location : Location		= path instanceof DnaHash
+	    ? { "hash": path as DnaHash }
+	    : { "path": path as string };
+
+	let input : RegisterDnaInput	= {
 	    modifiers,
+	    ...location,
 	};
 
-	if ( path instanceof HoloHash )
-	    input.hash			= path;
-	else
-	    input.path			= path;
-
-	return new DnaHash( await this._request("register_dna", input ) );
+	return new DnaHash( await this.#request("register_dna", input ) );
     }
 
     async installApp ( app_id, agent_hash, happ_bundle, options ) {
@@ -209,6 +214,8 @@ export class AdminClient {
 	    "agent_key": new AgentPubKey(agent_hash),
 	    "membrane_proofs": { ...options.membrane_proofs },
 	    "network_seed": options.network_seed,
+	    "path": undefined,
+	    "bundle": undefined,
 	};
 
 	if ( options.encode_membrane_proofs === true ) {
@@ -231,13 +238,13 @@ export class AdminClient {
 	    }
 	}
 
-	const installation		= await this._request("install_app", input );
+	const installation		= await this.#request("install_app", input );
 
 	return await reformat_app_info( installation );
     }
 
     async uninstallApp ( app_id ) { // -> undefined (expected)
-	return await this._request("uninstall_app", {
+	return await this.#request("uninstall_app", {
 	    "installed_app_id": app_id,
 	});
     }
@@ -246,13 +253,13 @@ export class AdminClient {
     async activateApp ( app_id ) { // -> undefined (on purpose for legacy support and to promote 'enableApp'
 	deprecation_notice("Holochain admin interface 'activateApp()' is deprecated; use 'enableApp()' instead");
 
-	return await this._request("activate_app", {
+	return await this.#request("activate_app", {
 	    "installed_app_id": app_id,
 	});
     }
 
     async enableApp ( app_id ) {
-	let resp			= await this._request("enable_app", {
+	let resp			= await this.#request("enable_app", {
 	    "installed_app_id": app_id,
 	});
 
@@ -263,13 +270,13 @@ export class AdminClient {
     }
 
     async disableApp ( app_id ) { // -> undefined (expected)
-	return await this._request("disable_app", {
+	return await this.#request("disable_app", {
 	    "installed_app_id": app_id,
 	});
     }
 
     async listDnas () {
-	const dnas			= await this._request("list_dnas");
+	const dnas			= await this.#request("list_dnas");
 
 	dnas.forEach( (dna, i) => {
 	    dnas[i]			= new DnaHash( dna );
@@ -281,7 +288,7 @@ export class AdminClient {
     }
 
     async listCells () {
-	const cells			= await this._request("list_cell_ids");
+	const cells			= await this.#request("list_cell_ids");
 
 	cells.forEach( (cell, i) => {
 	    cells[i]			= [ new DnaHash( cell[0] ), new AgentPubKey( cell[1] ) ];
@@ -299,7 +306,7 @@ export class AdminClient {
 	// Stopped,
 	// Paused,
 	status				= status.charAt(0).toUpperCase() + status.slice(1);
-	const apps			= await this._request("list_apps", {
+	const apps			= await this.#request("list_apps", {
 	    "status_filter": {
 		[status]: null,
 	    },
@@ -312,7 +319,7 @@ export class AdminClient {
     }
 
     async listAppInterfaces () {
-	const ifaces			= await this._request("list_app_interfaces");
+	const ifaces			= await this.#request("list_app_interfaces");
 	ifaces.sort();
 
 	log.debug && log("Interfaces (%s): %s", ifaces.length, ifaces );
@@ -331,7 +338,7 @@ export class AdminClient {
     }
 
     async cellState ( dna_hash, agent_hash, start, end ) {
-	const state_json		= await this._request("dump_state", {
+	const state_json		= await this.#request("dump_state", {
 	    "cell_id": [
 		new DnaHash( dna_hash ),
 		new AgentPubKey( agent_hash ),
@@ -473,7 +480,7 @@ export class AdminClient {
     }
 
     async requestAgentInfo ( cell_id = null ) {
-	const infos			= await this._request("agent_info", {
+	const infos			= await this.#request("agent_info", {
 	    "cell_id": cell_id,
 	});
 
@@ -512,7 +519,7 @@ export class AdminClient {
 	    },
 	};
 
-	await this._request("grant_zome_call_capability", input );
+	await this.#request("grant_zome_call_capability", input );
 
 	return true;
     }
@@ -535,7 +542,7 @@ export class AdminClient {
 	    },
 	};
 
-	await this._request("grant_zome_call_capability", input );
+	await this.#request("grant_zome_call_capability", input );
 
 	return true;
     }
@@ -559,7 +566,7 @@ export class AdminClient {
 	    },
 	};
 
-	await this._request("grant_zome_call_capability", input );
+	await this.#request("grant_zome_call_capability", input );
 
 	return true;
     }
@@ -570,15 +577,23 @@ export class AdminClient {
     }
 
     toString () {
-	return "AdminClient" + String( this._conn );
+	return "AdminClient" + String( this.#conn );
     }
 }
-set_tostringtag( AdminClient, "AdminClient" );
+set_tostringtag( AdminClient );
 
 
 export function logging () {
     log.debug				= true;
 }
+
+
+export {
+    DeprecationNotice,
+
+    // Sub-package from @spartan-hc/holochain-websocket
+    HolochainWebsocket,
+};
 
 export default {
     AdminClient,

@@ -19,7 +19,7 @@ import {
 import {
     AdminClient,
     HolochainWebsocket,
-}					from '../../src/node.js';
+}					from '../../lib/node.js';
 const {
     ConductorError,
 }					= HolochainWebsocket;

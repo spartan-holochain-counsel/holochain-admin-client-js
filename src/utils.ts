@@ -4,7 +4,10 @@ import { DnaHash,
 	 AgentPubKey }			from '@spartan-hc/holo-hash';
 
 
-export function set_tostringtag ( cls, name ) {
+export function set_tostringtag (
+    cls: new (...args) => any,
+    name?: string,
+) : void {
     Object.defineProperty( cls, "name", {
 	value: name || cls.name,
     });
@@ -13,6 +16,7 @@ export function set_tostringtag ( cls, name ) {
 	enumerable: false,
     });
 }
+
 
 export function reformat_cell_errors ( cell_errors ) {
     log.debug && log("Reformatting cell %s errors", cell_errors.length );
@@ -28,12 +32,14 @@ export function reformat_cell_errors ( cell_errors ) {
     return cell_errors;
 }
 
+
 export function reformat_cell_id ( cell_id ) {
     return [
 	new DnaHash(	 cell_id[0] ),
 	new AgentPubKey( cell_id[1] ),
     ];
 }
+
 
 export async function reformat_app_info ( app_info ) {
     log.debug && log("Reformatting app info: %s", app_info.installed_app_id );
@@ -44,11 +50,11 @@ export async function reformat_app_info ( app_info ) {
     app_info.agent_pub_key		= new AgentPubKey( app_info.agent_pub_key );
     app_info.roles			= {};
 
-    for ( let [role_name, cells] of Object.entries( app_info.cell_info ) ) {
+    for ( let [role_name, cells] of (Object.entries( app_info.cell_info ) as any) ) {
 	// The first cell info is the original provisioned one.  The rest are clones.
 	const role			= app_info.roles[ role_name ] = {
 	    "cloned": [],
-	};
+	} as any;
 
 	const base_cell			= cells.shift();
 
@@ -85,7 +91,8 @@ export async function reformat_app_info ( app_info ) {
     return app_info;
 }
 
-export function log ( msg, ...args ) {
+
+export function log ( msg: string, ...args: Array<any> ) : void {
     let datetime			= (new Date()).toISOString();
     console.log(`${datetime} [ src/index. ]  INFO: ${msg}`, ...args );
 }
