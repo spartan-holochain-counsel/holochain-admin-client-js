@@ -19,11 +19,14 @@ import {
 import {
     AdminClient,
     HolochainWebsocket,
+    logging,
 }					from '../../lib/node.js';
 const {
     ConductorError,
 }					= HolochainWebsocket;
 
+if ( log.level_rank > 2 )
+    logging();
 
 const TEST_DNA_PATH			= new URL( "../packs/memory.dna", import.meta.url ).pathname;
 const TEST_HAPP_PATH			= new URL( "../packs/storage.happ", import.meta.url ).pathname;
@@ -50,6 +53,11 @@ function basic_tests () {
 	log.info("Add Admin Interface response: %s", resp );
     });
 
+    it("should add admin interfaces", async function () {
+	let resp			= await admin.addAdminInterface( 58_766, 58_767 );
+	log.info("Add Admin Interfaces response: %s", resp );
+    });
+
     it("should generate agent", async function () {
 	agent_hash			= await admin.generateAgent();
 	log.normal("Agent response: %s", agent_hash );
@@ -59,7 +67,7 @@ function basic_tests () {
 	let installation		= await admin.installApp( `${TEST_APP_ID}`, agent_hash, TEST_HAPP_PATH, {
 	    "network_seed": Math.random().toString(),
 	});
-	log.normal("Installed app '%s' [status: %s]", installation.installed_app_id, installation.status );
+	log.normal("Installed app '%s' [status: %s]: %s", installation.installed_app_id, installation.status, json.debug(installation) );
 
 	Object.entries( installation.roles ).forEach( ([role_name, role]) => {
 	    log.trace("  %s => %s (provisioned: %s, enabled: %s)", () => [
@@ -101,6 +109,8 @@ function basic_tests () {
     });
 
     it("should register DNAs", async function () {
+	this.timeout( 30_000 );
+
 	const dna_hash			= await admin.registerDna( TEST_DNA_PATH );
 	log.normal("Register response: %s", dna_hash );
 

@@ -22,7 +22,12 @@ import { DeprecationNotice }		from './errors.js';
 import {
     Location,
     LocationValue,
+    CellId,
+    CapabilitySecret,
+    CapabilityFunctions,
+    Installation,
     RegisterDnaInput,
+    InstallAppInput,
 }					from './types';
 
 
@@ -34,14 +39,11 @@ export async function sha512 ( bytes ) {
     return await crypto.subtle.digest("SHA-512", bytes );
 }
 
+
 async function hash_secret ( secret ) {
     return new Uint8Array( await sha512( secret ) );
 }
 
-function deprecation_notice ( msg ) {
-    const err				= new DeprecationNotice( msg );
-    console.error( err );
-}
 
 function normalize_granted_functions ( granted_functions ) {
     // Supports
@@ -134,12 +136,16 @@ export class AdminClient {
 	});
     }
 
-    async connection () {
+    async connection () : Promise<Connection> {
 	await this.#conn_load;
 	return this.#conn;
     }
 
-    async #request ( ...args ) {
+    async #request (
+	method: string,
+	args?: any,
+	timeout?: number,
+    ) : Promise<any> {
 	const conn			= await this.connection();
 
 	if ( conn.opened === false ) {
@@ -147,21 +153,22 @@ export class AdminClient {
 	    await conn.open();
 	}
 
-	return await conn.request( ...args );
+	return await conn.request( method, args, timeout );
     }
 
-    async attachAppInterface ( port ) {
+    async attachAppInterface ( port?: number ) : Promise<{ port: number }> {
 	let resp			= await this.#request("attach_app_interface", {
 	    "port": port,
 	});
+
 	return resp;
     }
 
-    async addAdminInterface ( port ) {
+    async addAdminInterface ( port: number ) : Promise<void> {
 	return await this.addAdminInterfaces( port );
     }
 
-    async addAdminInterfaces ( ...ports ) {
+    async addAdminInterfaces ( ...ports: Array<number> ) : Promise<void> {
 	let resp			= await this.#request("add_admin_interfaces", ports.map( port => {
 	    return {
 		"driver": {
@@ -170,16 +177,20 @@ export class AdminClient {
 		},
 	    };
 	}) );
+
 	// The response value is 'undefined' but we return it anyway in case Conductor starts
 	// sending feedback.
 	return resp;
     }
 
-    async generateAgent () {
+    async generateAgent () : Promise<AgentPubKey> {
 	return new AgentPubKey( await this.#request("generate_agent_pub_key") );
     }
 
-    async registerDna ( path: LocationValue, modifiers: any ) {
+    async registerDna (
+	path: LocationValue,
+	modifiers: any,
+    ) : Promise<DnaHash> {
 	modifiers			= Object.assign( {}, {
 	    "network_seed": null, // String
 	    "properties": null, // Object or msgpacked bytes?
@@ -199,24 +210,34 @@ export class AdminClient {
 	return new DnaHash( await this.#request("register_dna", input ) );
     }
 
-    async installApp ( app_id, agent_hash, happ_bundle, options ) {
+    async installApp (
+	app_id:		string,
+	agent_hash:	AgentPubKey,
+	happ_bundle:	any,
+	options?:	any,
+    ) : Promise<Installation> {
 	options				= Object.assign( {}, {
 	    "membrane_proofs": {},
 	    "network_seed": null, // overrite bundle DNAs
 	    "encode_membrane_proofs": true,
 	}, options );
 
+	if ( ["string", "object"].includes( happ_bundle ) || happ_bundle === null )
+	    throw new TypeError(`Unknown hApp bundle type '${typeof happ_bundle}'; expected a String or Uint8Array`);
+
 	if ( app_id === "*" )
 	    app_id			= ( Math.random() * 1e17 ).toString(16).slice(0,8);
 
-	const input			= {
+	const input : InstallAppInput	= Object.assign({
 	    "installed_app_id": app_id,
 	    "agent_key": new AgentPubKey(agent_hash),
 	    "membrane_proofs": { ...options.membrane_proofs },
 	    "network_seed": options.network_seed,
-	    "path": undefined,
-	    "bundle": undefined,
-	};
+	}, typeof happ_bundle === "string" ? {
+	    "path": happ_bundle,
+	} : {
+	    "bundle": happ_bundle,
+	});
 
 	if ( options.encode_membrane_proofs === true ) {
 	    for ( let role in input.membrane_proofs ) {
@@ -224,41 +245,25 @@ export class AdminClient {
 	    }
 	}
 
-	if ( typeof happ_bundle === "string" )
-	    input.path			= happ_bundle;
-	else if ( typeof happ_bundle === "object" && happ_bundle !== null )
-	    input.bundle		= happ_bundle;
-	else
-	    throw new TypeError(`Unknown hApp bundle type '${typeof happ_bundle}'; expected a String or Uint8Array`);
-
 	// Temporary fix for a bug in mr_bundle
-	if ( input.bundle ) {
+	if ( "bundle" in input ) {
 	    for ( let rpath in input.bundle.resources ) {
 		input.bundle.resources[ rpath ]	= Array.from( input.bundle.resources[ rpath ] );
 	    }
 	}
 
-	const installation		= await this.#request("install_app", input );
+	const app_info			= await this.#request("install_app", input );
 
-	return await reformat_app_info( installation );
+	return await reformat_app_info( app_info );
     }
 
-    async uninstallApp ( app_id ) { // -> undefined (expected)
+    async uninstallApp ( app_id: string ) : Promise<void> { // -> undefined (expected)
 	return await this.#request("uninstall_app", {
 	    "installed_app_id": app_id,
 	});
     }
 
-    // DEPRECATED in Holochain
-    async activateApp ( app_id ) { // -> undefined (on purpose for legacy support and to promote 'enableApp'
-	deprecation_notice("Holochain admin interface 'activateApp()' is deprecated; use 'enableApp()' instead");
-
-	return await this.#request("activate_app", {
-	    "installed_app_id": app_id,
-	});
-    }
-
-    async enableApp ( app_id ) {
+    async enableApp ( app_id: string ) {
 	let resp			= await this.#request("enable_app", {
 	    "installed_app_id": app_id,
 	});
@@ -269,13 +274,13 @@ export class AdminClient {
 	return resp;
     }
 
-    async disableApp ( app_id ) { // -> undefined (expected)
+    async disableApp ( app_id: string ) { // -> undefined (expected)
 	return await this.#request("disable_app", {
 	    "installed_app_id": app_id,
 	});
     }
 
-    async listDnas () {
+    async listDnas () : Promise<Array<DnaHash>> {
 	const dnas			= await this.#request("list_dnas");
 
 	dnas.forEach( (dna, i) => {
@@ -287,7 +292,7 @@ export class AdminClient {
 	return dnas;
     }
 
-    async listCells () {
+    async listCells () : Promise<Array<[ DnaHash, AgentPubKey ]>> {
 	const cells			= await this.#request("list_cell_ids");
 
 	cells.forEach( (cell, i) => {
@@ -299,7 +304,9 @@ export class AdminClient {
 	return cells;
     }
 
-    async listApps ( status = "Running" ) { // Holochain's default is 'Running'
+    async listApps (
+	status: string = "Running", // Holochain's default is 'Running'
+    ) : Promise<Array<Installation>> {
 	// Enabled,
 	// Disabled,
 	// Running,
@@ -318,7 +325,7 @@ export class AdminClient {
 	);
     }
 
-    async listAppInterfaces () {
+    async listAppInterfaces () : Promise<Array<number>> {
 	const ifaces			= await this.#request("list_app_interfaces");
 	ifaces.sort();
 
@@ -326,7 +333,7 @@ export class AdminClient {
 	return ifaces;
     }
 
-    async listAgents () {
+    async listAgents () : Promise<Array<AgentPubKey>> {
 	const agent_infos			= await this.requestAgentInfo();
 	const cell_agents			= agent_infos.map( info => info.agent.toString() );
 
@@ -334,10 +341,16 @@ export class AdminClient {
 	      .map( hash => new AgentPubKey(hash) );
 	unique_agents.sort( deep_compare );
 
+	log.debug && log("Agents (%s): %s", unique_agents.length, unique_agents );
 	return unique_agents;
     }
 
-    async cellState ( dna_hash, agent_hash, start, end ) {
+    async cellState (
+	dna_hash:	DnaHash,
+	agent_hash:	AgentPubKey,
+	start?:		number,
+	end?:		number,
+    ) {
 	const state_json		= await this.#request("dump_state", {
 	    "cell_id": [
 		new DnaHash( dna_hash ),
@@ -479,7 +492,9 @@ export class AdminClient {
 	return state;
     }
 
-    async requestAgentInfo ( cell_id = null ) {
+    async requestAgentInfo (
+	cell_id: CellId = null,
+    ) {
 	const infos			= await this.#request("agent_info", {
 	    "cell_id": cell_id,
 	});
@@ -498,7 +513,14 @@ export class AdminClient {
 	return infos;
     }
 
-    async grantCapability ( tag, agent, dna, functions, secret, assignees ) {
+    async grantCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+	secret?:	CapabilitySecret,
+	assignees?:	Array<AgentPubKey>,
+    ) : Promise<boolean> {
 	if ( assignees !== undefined )
 	    return await this.grantAssignedCapability( tag, agent, dna, functions, secret, assignees );
 	else if ( secret !== undefined )
@@ -507,7 +529,12 @@ export class AdminClient {
 	    return await this.grantUnrestrictedCapability( tag, agent, dna, functions );
     }
 
-    async grantUnrestrictedCapability ( tag, agent, dna, functions ) {
+    async grantUnrestrictedCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+    ) : Promise<boolean> {
 	const input			= {
 	    "cell_id": [ dna, agent ],
 	    "cap_grant": {
@@ -524,7 +551,13 @@ export class AdminClient {
 	return true;
     }
 
-    async grantTransferableCapability ( tag, agent, dna, functions, secret ) {
+    async grantTransferableCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+	secret:		CapabilitySecret,
+    ) : Promise<boolean> {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
 	    secret			= await hash_secret( secret );
@@ -547,7 +580,14 @@ export class AdminClient {
 	return true;
     }
 
-    async grantAssignedCapability ( tag, agent, dna, functions, secret, agents ) {
+    async grantAssignedCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+	secret:		CapabilitySecret,
+	assignees?:	Array<AgentPubKey>,
+    ) : Promise<boolean> {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
 	    secret			= await hash_secret( secret );
@@ -560,7 +600,7 @@ export class AdminClient {
 		"access": {
 		    "Transferable": {
 			"secret": secret,
-			"assignees": agents,
+			"assignees": assignees,
 		    },
 		},
 	    },
@@ -571,12 +611,14 @@ export class AdminClient {
 	return true;
     }
 
-    async close ( timeout ) {
+    async close (
+	timeout?: number,
+    ) : Promise<void> {
 	const conn			= await this.connection();
 	return await conn.close( timeout );
     }
 
-    toString () {
+    toString () : string {
 	return "AdminClient" + String( this.#conn );
     }
 }
