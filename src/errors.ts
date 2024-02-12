@@ -37,4 +37,4 @@ export class CustomError extends Error {
 set_tostringtag( CustomError );
 
 export class DeprecationNotice extends CustomError {}
-set_tostringtag( DeprecationNotice, "DeprecationNotice" );
+set_tostringtag( DeprecationNotice );

@@ -2,13 +2,15 @@
 import crypto				from 'crypto';
 
 if ( global.crypto === undefined )
-    global.crypto			= {};
+    global.crypto			= {} as any;
 
 if ( global.crypto.subtle?.digest === undefined ) {
     if ( global.crypto.subtle === undefined )
-	global.crypto.subtle		= {};
+	// @ts-ignore
+	global.crypto.subtle		= {} as any;
 
-    global.crypto.subtle.digest		= ( _, bytes ) => {
+    // @ts-ignore
+    global.crypto.subtle.digest		= ( _, bytes: Uint8Array ) => {
 	const hash			= crypto.createHash('sha512');
 	hash.update( bytes );
 	const digest			= hash.digest();

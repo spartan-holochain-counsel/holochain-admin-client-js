@@ -9,6 +9,7 @@ import {
 import { encode, decode }		from '@msgpack/msgpack';
 import {
     Connection,
+    ConnectionOptions,
 }					from '@spartan-hc/holochain-websocket';
 import HolochainWebsocket		from '@spartan-hc/holochain-websocket';
 
@@ -18,13 +19,18 @@ import { log,
 	 reformat_cell_errors,
 	 set_tostringtag }		from './utils.js';
 import { DeprecationNotice }		from './errors.js';
+import {
+    Location,
+    LocationValue,
+    CellId,
+    CapabilitySecret,
+    CapabilityFunctions,
+    Installation,
+    RegisterDnaInput,
+    InstallAppInput,
+}					from './types';
 
-export {
-    DeprecationNotice,
 
-    // Sub-package from @spartan-hc/holochain-websocket
-    HolochainWebsocket,
-};
 
 export async function sha512 ( bytes ) {
     if ( typeof crypto === "undefined" || !crypto.subtle )
@@ -33,14 +39,11 @@ export async function sha512 ( bytes ) {
     return await crypto.subtle.digest("SHA-512", bytes );
 }
 
+
 async function hash_secret ( secret ) {
     return new Uint8Array( await sha512( secret ) );
 }
 
-function deprecation_notice ( msg ) {
-    const err				= new DeprecationNotice( msg );
-    console.error( err );
-}
 
 function normalize_granted_functions ( granted_functions ) {
     // Supports
@@ -66,7 +69,7 @@ function normalize_granted_functions ( granted_functions ) {
     const functions		= [];
     for ( let zome_name in granted_functions ) {
 	if ( !Array.isArray( granted_functions[ zome_name ] ) )
-	    throw new TypeError(`Invalid granted functions object; functions must be an array, not type '${typeof fn_name}'`);
+	    throw new TypeError(`Invalid granted functions object; functions must be an array, not type '${typeof granted_functions[ zome_name ]}'`);
 
 	for ( let fn_name of granted_functions[ zome_name ] ) {
 	    if ( typeof fn_name !== "string" )
@@ -121,43 +124,52 @@ export class AdminClient {
     static APPS_STOPPED			= "Stopped";
     static APPS_PAUSED			= "Paused";
 
-    constructor ( connection, opts = {} ) {
-	this._conn_load			= new Promise(async (f,r) => {
-	    this._conn			= connection instanceof Connection
-		? port
+    #conn:		any;
+    #conn_load:		Promise<void>;
+
+    constructor ( connection, opts : ConnectionOptions = {} ) {
+	this.#conn_load			= new Promise(async (f,r) => {
+	    this.#conn			= connection instanceof Connection
+		? connection
 		: new Connection( connection, { "name": "admin", ...opts });
 	    f();
 	});
     }
 
-    async connection () {
-	await this._conn_load;
-	return this._conn;
+    async connection () : Promise<Connection> {
+	await this.#conn_load;
+	return this.#conn;
     }
 
-    async _request ( ...args ) {
+    async #request (
+	method: string,
+	args?: any,
+	timeout?: number,
+    ) : Promise<any> {
 	const conn			= await this.connection();
-	if ( conn._opened === false ) {
+
+	if ( conn.opened === false ) {
 	    log.debug && log("Opening connection '%s' for AdminClient", conn.name );
 	    await conn.open();
 	}
 
-	return await conn.request( ...args );
+	return await conn.request( method, args, timeout );
     }
 
-    async attachAppInterface ( port ) {
-	let resp			= await this._request("attach_app_interface", {
+    async attachAppInterface ( port?: number ) : Promise<{ port: number }> {
+	let resp			= await this.#request("attach_app_interface", {
 	    "port": port,
 	});
+
 	return resp;
     }
 
-    async addAdminInterface ( port ) {
+    async addAdminInterface ( port: number ) : Promise<void> {
 	return await this.addAdminInterfaces( port );
     }
 
-    async addAdminInterfaces ( ...ports ) {
-	let resp			= await this._request("add_admin_interfaces", ports.map( port => {
+    async addAdminInterfaces ( ...ports: Array<number> ) : Promise<void> {
+	let resp			= await this.#request("add_admin_interfaces", ports.map( port => {
 	    return {
 		"driver": {
 		    "type": "websocket",
@@ -165,16 +177,20 @@ export class AdminClient {
 		},
 	    };
 	}) );
+
 	// The response value is 'undefined' but we return it anyway in case Conductor starts
 	// sending feedback.
 	return resp;
     }
 
-    async generateAgent () {
-	return new AgentPubKey( await this._request("generate_agent_pub_key") );
+    async generateAgent () : Promise<AgentPubKey> {
+	return new AgentPubKey( await this.#request("generate_agent_pub_key") );
     }
 
-    async registerDna ( path, modifiers ) {
+    async registerDna (
+	path: LocationValue,
+	modifiers: any,
+    ) : Promise<DnaHash> {
 	modifiers			= Object.assign( {}, {
 	    "network_seed": null, // String
 	    "properties": null, // Object or msgpacked bytes?
@@ -182,34 +198,46 @@ export class AdminClient {
 	    "quantum_time": null, // Duration
 	}, modifiers );
 
-	let input			= {
+	let location : Location		= path instanceof DnaHash
+	    ? { "hash": path as DnaHash }
+	    : { "path": path as string };
+
+	let input : RegisterDnaInput	= {
 	    modifiers,
+	    ...location,
 	};
 
-	if ( path instanceof HoloHash )
-	    input.hash			= path;
-	else
-	    input.path			= path;
-
-	return new DnaHash( await this._request("register_dna", input ) );
+	return new DnaHash( await this.#request("register_dna", input ) );
     }
 
-    async installApp ( app_id, agent_hash, happ_bundle, options ) {
+    async installApp (
+	app_id:		string,
+	agent_hash:	AgentPubKey,
+	happ_bundle:	any,
+	options?:	any,
+    ) : Promise<Installation> {
 	options				= Object.assign( {}, {
 	    "membrane_proofs": {},
 	    "network_seed": null, // overrite bundle DNAs
 	    "encode_membrane_proofs": true,
 	}, options );
 
+	if ( ["string", "object"].includes( happ_bundle ) || happ_bundle === null )
+	    throw new TypeError(`Unknown hApp bundle type '${typeof happ_bundle}'; expected a String or Uint8Array`);
+
 	if ( app_id === "*" )
 	    app_id			= ( Math.random() * 1e17 ).toString(16).slice(0,8);
 
-	const input			= {
+	const input : InstallAppInput	= Object.assign({
 	    "installed_app_id": app_id,
 	    "agent_key": new AgentPubKey(agent_hash),
 	    "membrane_proofs": { ...options.membrane_proofs },
 	    "network_seed": options.network_seed,
-	};
+	}, typeof happ_bundle === "string" ? {
+	    "path": happ_bundle,
+	} : {
+	    "bundle": happ_bundle,
+	});
 
 	if ( options.encode_membrane_proofs === true ) {
 	    for ( let role in input.membrane_proofs ) {
@@ -217,42 +245,26 @@ export class AdminClient {
 	    }
 	}
 
-	if ( typeof happ_bundle === "string" )
-	    input.path			= happ_bundle;
-	else if ( typeof happ_bundle === "object" && happ_bundle !== null )
-	    input.bundle		= happ_bundle;
-	else
-	    throw new TypeError(`Unknown hApp bundle type '${typeof happ_bundle}'; expected a String or Uint8Array`);
-
 	// Temporary fix for a bug in mr_bundle
-	if ( input.bundle ) {
+	if ( "bundle" in input ) {
 	    for ( let rpath in input.bundle.resources ) {
 		input.bundle.resources[ rpath ]	= Array.from( input.bundle.resources[ rpath ] );
 	    }
 	}
 
-	const installation		= await this._request("install_app", input );
+	const app_info			= await this.#request("install_app", input );
 
-	return await reformat_app_info( installation );
+	return await reformat_app_info( app_info );
     }
 
-    async uninstallApp ( app_id ) { // -> undefined (expected)
-	return await this._request("uninstall_app", {
+    async uninstallApp ( app_id: string ) : Promise<void> { // -> undefined (expected)
+	return await this.#request("uninstall_app", {
 	    "installed_app_id": app_id,
 	});
     }
 
-    // DEPRECATED in Holochain
-    async activateApp ( app_id ) { // -> undefined (on purpose for legacy support and to promote 'enableApp'
-	deprecation_notice("Holochain admin interface 'activateApp()' is deprecated; use 'enableApp()' instead");
-
-	return await this._request("activate_app", {
-	    "installed_app_id": app_id,
-	});
-    }
-
-    async enableApp ( app_id ) {
-	let resp			= await this._request("enable_app", {
+    async enableApp ( app_id: string ) {
+	let resp			= await this.#request("enable_app", {
 	    "installed_app_id": app_id,
 	});
 
@@ -262,14 +274,14 @@ export class AdminClient {
 	return resp;
     }
 
-    async disableApp ( app_id ) { // -> undefined (expected)
-	return await this._request("disable_app", {
+    async disableApp ( app_id: string ) { // -> undefined (expected)
+	return await this.#request("disable_app", {
 	    "installed_app_id": app_id,
 	});
     }
 
-    async listDnas () {
-	const dnas			= await this._request("list_dnas");
+    async listDnas () : Promise<Array<DnaHash>> {
+	const dnas			= await this.#request("list_dnas");
 
 	dnas.forEach( (dna, i) => {
 	    dnas[i]			= new DnaHash( dna );
@@ -280,8 +292,8 @@ export class AdminClient {
 	return dnas;
     }
 
-    async listCells () {
-	const cells			= await this._request("list_cell_ids");
+    async listCells () : Promise<Array<[ DnaHash, AgentPubKey ]>> {
+	const cells			= await this.#request("list_cell_ids");
 
 	cells.forEach( (cell, i) => {
 	    cells[i]			= [ new DnaHash( cell[0] ), new AgentPubKey( cell[1] ) ];
@@ -292,14 +304,16 @@ export class AdminClient {
 	return cells;
     }
 
-    async listApps ( status = "Running" ) { // Holochain's default is 'Running'
+    async listApps (
+	status: string = "Running", // Holochain's default is 'Running'
+    ) : Promise<Array<Installation>> {
 	// Enabled,
 	// Disabled,
 	// Running,
 	// Stopped,
 	// Paused,
 	status				= status.charAt(0).toUpperCase() + status.slice(1);
-	const apps			= await this._request("list_apps", {
+	const apps			= await this.#request("list_apps", {
 	    "status_filter": {
 		[status]: null,
 	    },
@@ -311,15 +325,15 @@ export class AdminClient {
 	);
     }
 
-    async listAppInterfaces () {
-	const ifaces			= await this._request("list_app_interfaces");
+    async listAppInterfaces () : Promise<Array<number>> {
+	const ifaces			= await this.#request("list_app_interfaces");
 	ifaces.sort();
 
 	log.debug && log("Interfaces (%s): %s", ifaces.length, ifaces );
 	return ifaces;
     }
 
-    async listAgents () {
+    async listAgents () : Promise<Array<AgentPubKey>> {
 	const agent_infos			= await this.requestAgentInfo();
 	const cell_agents			= agent_infos.map( info => info.agent.toString() );
 
@@ -327,11 +341,17 @@ export class AdminClient {
 	      .map( hash => new AgentPubKey(hash) );
 	unique_agents.sort( deep_compare );
 
+	log.debug && log("Agents (%s): %s", unique_agents.length, unique_agents );
 	return unique_agents;
     }
 
-    async cellState ( dna_hash, agent_hash, start, end ) {
-	const state_json		= await this._request("dump_state", {
+    async cellState (
+	dna_hash:	DnaHash,
+	agent_hash:	AgentPubKey,
+	start?:		number,
+	end?:		number,
+    ) {
+	const state_json		= await this.#request("dump_state", {
 	    "cell_id": [
 		new DnaHash( dna_hash ),
 		new AgentPubKey( agent_hash ),
@@ -472,8 +492,10 @@ export class AdminClient {
 	return state;
     }
 
-    async requestAgentInfo ( cell_id = null ) {
-	const infos			= await this._request("agent_info", {
+    async requestAgentInfo (
+	cell_id: CellId = null,
+    ) {
+	const infos			= await this.#request("agent_info", {
 	    "cell_id": cell_id,
 	});
 
@@ -491,7 +513,14 @@ export class AdminClient {
 	return infos;
     }
 
-    async grantCapability ( tag, agent, dna, functions, secret, assignees ) {
+    async grantCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+	secret?:	CapabilitySecret,
+	assignees?:	Array<AgentPubKey>,
+    ) : Promise<boolean> {
 	if ( assignees !== undefined )
 	    return await this.grantAssignedCapability( tag, agent, dna, functions, secret, assignees );
 	else if ( secret !== undefined )
@@ -500,7 +529,12 @@ export class AdminClient {
 	    return await this.grantUnrestrictedCapability( tag, agent, dna, functions );
     }
 
-    async grantUnrestrictedCapability ( tag, agent, dna, functions ) {
+    async grantUnrestrictedCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+    ) : Promise<boolean> {
 	const input			= {
 	    "cell_id": [ dna, agent ],
 	    "cap_grant": {
@@ -512,12 +546,18 @@ export class AdminClient {
 	    },
 	};
 
-	await this._request("grant_zome_call_capability", input );
+	await this.#request("grant_zome_call_capability", input );
 
 	return true;
     }
 
-    async grantTransferableCapability ( tag, agent, dna, functions, secret ) {
+    async grantTransferableCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+	secret:		CapabilitySecret,
+    ) : Promise<boolean> {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
 	    secret			= await hash_secret( secret );
@@ -535,12 +575,19 @@ export class AdminClient {
 	    },
 	};
 
-	await this._request("grant_zome_call_capability", input );
+	await this.#request("grant_zome_call_capability", input );
 
 	return true;
     }
 
-    async grantAssignedCapability ( tag, agent, dna, functions, secret, agents ) {
+    async grantAssignedCapability (
+	tag:		string,
+	agent:		AgentPubKey,
+	dna:		DnaHash,
+	functions:	CapabilityFunctions,
+	secret:		CapabilitySecret,
+	assignees?:	Array<AgentPubKey>,
+    ) : Promise<boolean> {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
 	    secret			= await hash_secret( secret );
@@ -553,32 +600,42 @@ export class AdminClient {
 		"access": {
 		    "Transferable": {
 			"secret": secret,
-			"assignees": agents,
+			"assignees": assignees,
 		    },
 		},
 	    },
 	};
 
-	await this._request("grant_zome_call_capability", input );
+	await this.#request("grant_zome_call_capability", input );
 
 	return true;
     }
 
-    async close ( timeout ) {
+    async close (
+	timeout?: number,
+    ) : Promise<void> {
 	const conn			= await this.connection();
 	return await conn.close( timeout );
     }
 
-    toString () {
-	return "AdminClient" + String( this._conn );
+    toString () : string {
+	return "AdminClient" + String( this.#conn );
     }
 }
-set_tostringtag( AdminClient, "AdminClient" );
+set_tostringtag( AdminClient );
 
 
 export function logging () {
     log.debug				= true;
 }
+
+
+export {
+    DeprecationNotice,
+
+    // Sub-package from @spartan-hc/holochain-websocket
+    HolochainWebsocket,
+};
 
 export default {
     AdminClient,
