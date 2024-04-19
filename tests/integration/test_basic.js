@@ -38,14 +38,12 @@ let conductor;
 let admin;
 let dna_hash, dna2_hash;
 let agent_hash;
-let app_port;
 
 
 function basic_tests () {
     it("should attach app interface", async function () {
 	let resp			= await admin.attachAppInterface();
 	log.info("Attach App Interface response: %s", resp );
-	app_port			= resp.port;
     });
 
     it("should add admin interface", async function () {
@@ -54,7 +52,7 @@ function basic_tests () {
     });
 
     it("should add admin interfaces", async function () {
-	let resp			= await admin.addAdminInterface( 58_766, 58_767 );
+	let resp			= await admin.addAdminInterfaces([ 58_766, 58_767 ]);
 	log.info("Add Admin Interfaces response: %s", resp );
     });
 
@@ -314,7 +312,12 @@ function errors_tests () {
 
     it("should fail to add admin interface", async function () {
 	await expect_reject( async () => {
-	    await admin.addAdminInterface( app_port );
+	    // First request binds to IPv6
+	    await admin.addAdminInterface( 58_768 );
+	    // Second request binds to IPv4
+	    await admin.addAdminInterface( 58_768 );
+	    // Third request will fail
+	    await admin.addAdminInterface( 58_768 );
 	}, ConductorError, "Address already in us" );
     });
 
@@ -351,7 +354,7 @@ describe("Integration: Admin Client", () => {
 
     before(async () => {
 	conductor			= new Holochain({
-	    "default_loggers": process.env.LOG_LEVEL === "trace",
+	    "default_stdout_loggers":	log.level_rank > 3,
 	});
 
 	await conductor.start();

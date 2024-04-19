@@ -64,7 +64,7 @@ describe("E2E: Holochain Admin Client", () => {
 	this.timeout( 10_000 );
 
 	conductor			= new Holochain({
-	    "default_loggers":	process.env.LOG_LEVEL === "trace",
+	    "default_stdout_loggers":	log.level_rank > 3,
 	});
 
 	await conductor.start();

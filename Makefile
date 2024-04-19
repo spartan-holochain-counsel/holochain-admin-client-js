@@ -48,21 +48,24 @@ DEBUG_LEVEL	       ?= warn
 TEST_ENV_VARS		= LOG_LEVEL=$(DEBUG_LEVEL)
 MOCHA_OPTS		= -t 15000 -n enable-source-maps
 
-test:				test-integration	test-e2e
-test-debug:			test-integration-debug	test-e2e-debug
-
-test-integration:		build
-	$(TEST_ENV_VARS) npx mocha $(MOCHA_OPTS) ./tests/integration
-test-integration-%:		build
-	$(TEST_ENV_VARS) npx mocha $(MOCHA_OPTS) ./tests/integration/test_$*.js
-
-test-e2e:		prepare-package build
-	$(TEST_ENV_VARS) npx mocha $(MOCHA_OPTS) ./tests/e2e
-test-e2e-%:		prepare-package build
-	$(TEST_ENV_VARS) npx mocha $(MOCHA_OPTS) ./tests/e2e/test_$*.js
-
 test-server:
 	python3 -m http.server 8765
+
+test:
+	make -s test-integration
+	make -s test-e2e
+
+test-integration:
+	make -s test-integration-basic
+
+test-integration-basic:		build
+	$(TEST_ENV_VARS) npx mocha $(MOCHA_OPTS) ./tests/integration/test_basic.js
+
+test-e2e:
+	make -s test-e2e-basic
+
+test-e2e-basic:			prepare-package build
+	$(TEST_ENV_VARS) npx mocha $(MOCHA_OPTS) ./tests/e2e/test_basic.js
 
 
 #

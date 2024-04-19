@@ -49,10 +49,12 @@ await admin.attachAppInterface( 45678 );
 ```
 
 
-### `<AdminClient>.addAdminInterface( port ) -> Promise<undefined>`
+### `<AdminClient>.addAdminInterface( port, allowed_origins ) -> Promise<undefined>`
 Open a port where the Conductor's Admin Interface will listen for requests.
 
 - `port` - (*required*) the TCP port
+- `allowed_origins` - (*optional*) limit the origins that are allowed to connect
+  - defaults to `*` (no limitations)
 
 Returns a Promise that resolves when complete.
 

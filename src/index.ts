@@ -28,7 +28,7 @@ import {
     Installation,
     RegisterDnaInput,
     InstallAppInput,
-}					from './types';
+}					from './types.js';
 
 
 
@@ -142,9 +142,9 @@ export class AdminClient {
     }
 
     async #request (
-	method: string,
-	args?: any,
-	timeout?: number,
+	method			: string,
+	args		       ?: any,
+	timeout		       ?: number,
     ) : Promise<any> {
 	const conn			= await this.connection();
 
@@ -156,24 +156,35 @@ export class AdminClient {
 	return await conn.request( method, args, timeout );
     }
 
-    async attachAppInterface ( port?: number ) : Promise<{ port: number }> {
+    async attachAppInterface (
+	port?			: number,
+	allowed_origins		: string = "*",
+    ) : Promise<{ port: number }> {
 	let resp			= await this.#request("attach_app_interface", {
 	    "port": port,
+	    allowed_origins,
 	});
 
 	return resp;
     }
 
-    async addAdminInterface ( port: number ) : Promise<void> {
-	return await this.addAdminInterfaces( port );
+    async addAdminInterface (
+	port			: number,
+	allowed_origins	       ?: string,
+    ) : Promise<void> {
+	return await this.addAdminInterfaces( [ port ], allowed_origins );
     }
 
-    async addAdminInterfaces ( ...ports: Array<number> ) : Promise<void> {
+    async addAdminInterfaces (
+	ports			: Array<number>,
+	allowed_origins		: string = "*",
+    ) : Promise<void> {
 	let resp			= await this.#request("add_admin_interfaces", ports.map( port => {
 	    return {
 		"driver": {
 		    "type": "websocket",
 		    "port": port,
+		    "allowed_origins": allowed_origins,
 		},
 	    };
 	}) );
@@ -188,8 +199,8 @@ export class AdminClient {
     }
 
     async registerDna (
-	path: LocationValue,
-	modifiers: any,
+	path			: LocationValue,
+	modifiers		: any,
     ) : Promise<DnaHash> {
 	modifiers			= Object.assign( {}, {
 	    "network_seed": null, // String
@@ -211,10 +222,10 @@ export class AdminClient {
     }
 
     async installApp (
-	app_id:		string,
-	agent_hash:	AgentPubKey,
-	happ_bundle:	any,
-	options?:	any,
+	app_id			: string,
+	agent_hash		: AgentPubKey,
+	happ_bundle		: any,
+	options		       ?: any,
     ) : Promise<Installation> {
 	options				= Object.assign( {}, {
 	    "membrane_proofs": {},
@@ -493,7 +504,7 @@ export class AdminClient {
     }
 
     async requestAgentInfo (
-	cell_id: CellId = null,
+	cell_id			: CellId = null,
     ) {
 	const infos			= await this.#request("agent_info", {
 	    "cell_id": cell_id,
@@ -514,12 +525,12 @@ export class AdminClient {
     }
 
     async grantCapability (
-	tag:		string,
-	agent:		AgentPubKey,
-	dna:		DnaHash,
-	functions:	CapabilityFunctions,
-	secret?:	CapabilitySecret,
-	assignees?:	Array<AgentPubKey>,
+	tag			: string,
+	agent			: AgentPubKey,
+	dna			: DnaHash,
+	functions		: CapabilityFunctions,
+	secret		       ?: CapabilitySecret,
+	assignees	       ?: Array<AgentPubKey>,
     ) : Promise<boolean> {
 	if ( assignees !== undefined )
 	    return await this.grantAssignedCapability( tag, agent, dna, functions, secret, assignees );
@@ -530,10 +541,10 @@ export class AdminClient {
     }
 
     async grantUnrestrictedCapability (
-	tag:		string,
-	agent:		AgentPubKey,
-	dna:		DnaHash,
-	functions:	CapabilityFunctions,
+	tag			: string,
+	agent			: AgentPubKey,
+	dna			: DnaHash,
+	functions		: CapabilityFunctions,
     ) : Promise<boolean> {
 	const input			= {
 	    "cell_id": [ dna, agent ],
@@ -552,11 +563,11 @@ export class AdminClient {
     }
 
     async grantTransferableCapability (
-	tag:		string,
-	agent:		AgentPubKey,
-	dna:		DnaHash,
-	functions:	CapabilityFunctions,
-	secret:		CapabilitySecret,
+	tag			: string,
+	agent			: AgentPubKey,
+	dna			: DnaHash,
+	functions		: CapabilityFunctions,
+	secret			: CapabilitySecret,
     ) : Promise<boolean> {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
@@ -581,12 +592,12 @@ export class AdminClient {
     }
 
     async grantAssignedCapability (
-	tag:		string,
-	agent:		AgentPubKey,
-	dna:		DnaHash,
-	functions:	CapabilityFunctions,
-	secret:		CapabilitySecret,
-	assignees?:	Array<AgentPubKey>,
+	tag			: string,
+	agent			: AgentPubKey,
+	dna			: DnaHash,
+	functions		: CapabilityFunctions,
+	secret			: CapabilitySecret,
+	assignees	       ?: Array<AgentPubKey>,
     ) : Promise<boolean> {
 	// if secret is a string, hash it so it meets the 512 bit requirement
 	if ( typeof secret === "string" )
@@ -612,7 +623,7 @@ export class AdminClient {
     }
 
     async close (
-	timeout?: number,
+	timeout		       ?: number,
     ) : Promise<void> {
 	const conn			= await this.connection();
 	return await conn.close( timeout );
@@ -636,6 +647,8 @@ export {
     // Sub-package from @spartan-hc/holochain-websocket
     HolochainWebsocket,
 };
+
+export * from './types.js';
 
 export default {
     AdminClient,

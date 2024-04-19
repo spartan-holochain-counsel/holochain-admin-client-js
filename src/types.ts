@@ -177,7 +177,6 @@ export type Installation = {
     installed_app_id:	string;
     manifest:		DnaManifestV1;
     roles:		Record<string, Role>;
-    cell_info:		Record<string, Array<CellInfo>>;
     running:		boolean;
     status:		AppInfoStatus;
 };
