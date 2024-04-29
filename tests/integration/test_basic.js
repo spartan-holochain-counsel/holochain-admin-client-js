@@ -10,7 +10,10 @@ import nacl				from 'tweetnacl';
 import { Holochain }			from '@spartan-hc/holochain-backdrop';
 import json				from '@whi/json';
 
-import { expect_reject }		from './utils.js';
+import {
+    expect_reject,
+    linearSuite,
+}					from '../utils.js';
 
 import {
     HoloHash,
@@ -112,6 +115,9 @@ function basic_tests () {
 	const dna_hash			= await admin.registerDna( TEST_DNA_PATH );
 	log.normal("Register response: %s", dna_hash );
 
+	const dna_def			= await admin.getDnaDefinition( dna_hash );
+	log.normal("DNA defintion: %s", json.debug(dna_def) );
+
 	const mod1_hash			= await admin.registerDna( TEST_DNA_PATH, {
 	    "network_seed": "something else",
 	});
@@ -192,7 +198,7 @@ function basic_tests () {
 	const ifaces			= await admin.listAppInterfaces();
 
 	expect( ifaces			).to.have.length( 1 );
-	expect( ifaces[0]		).to.be.a("number");
+	expect( ifaces[0].port		).to.be.a("number");
     });
 
     it("should list agents", async function () {
@@ -260,6 +266,18 @@ function basic_tests () {
 	});
 
 	expect( succeeded		).to.be.true;
+    });
+
+    it("should create authentication token", async function () {
+	const auth			= await admin.issueAppAuthenticationToken({
+	    "installed_app_id":		TEST_APP_ID,
+	    "expiry_seconds":		0,
+	});
+
+	log.normal("Issued Authentication Token: %s", json.debug(auth) );
+
+	expect( auth.token		).to.be.a("Uint8Array");
+	expect( auth.expires_at		).to.be.a("number");
     });
 
     it("should disable app", async function () {
@@ -364,8 +382,8 @@ describe("Integration: Admin Client", () => {
 	admin				= new AdminClient( port );
     });
 
-    describe("Basic",		basic_tests );
-    describe("Errors",		errors_tests );
+    linearSuite("Basic",	basic_tests );
+    linearSuite("Errors",	errors_tests );
 
     after(async () => {
 	if ( admin ) {

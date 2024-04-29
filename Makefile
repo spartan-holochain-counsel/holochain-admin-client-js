@@ -19,26 +19,20 @@ node_modules:		package-lock.json
 	npm install
 	touch $@
 
-use-local-holo-hash:
-	cd tests; npm uninstall @spartan-hc/holo-hash
-	cd tests; npm install --save ../../holo-hash-js/
-use-npm-holo-hash:
-	cd tests; npm uninstall @spartan-hc/holo-hash
-	cd tests; npm install --save @spartan-hc/holo-hash
+npm-reinstall%-local:
+	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save$* $(LOCAL_PATH)
+npm-reinstall%-public:
+	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save$* $(NPM_PACKAGE)
 
-use-local-websocket:
-	cd tests; npm uninstall @spartan-hc/holochain-websocket
-	cd tests; npm install --save ../../holochain-websocket-js/
-use-npm-websocket:
-	cd tests; npm uninstall @spartan-hc/holochain-websocket
-	cd tests; npm install --save @spartan-hc/holochain-websocket
+npm-use-backdrop-public:
+npm-use-backdrop-local:
+npm-use-backdrop-%:
+	NPM_PACKAGE=@spartan-hc/holochain-backdrop LOCAL_PATH=../../node-backdrop make npm-reinstall-dev-$*
 
-use-local-backdrop:
-	cd tests; npm uninstall @spartan-hc/holochain-backdrop
-	cd tests; npm install --save-dev ../../node-holochain-backdrop/
-use-npm-backdrop:
-	cd tests; npm uninstall @spartan-hc/holochain-backdrop
-	cd tests; npm install --save-dev @spartan-hc/holochain-backdrop
+npm-use-websocket-public:
+npm-use-websocket-local:
+npm-use-websocket-%:
+	NPM_PACKAGE=@spartan-hc/holochain-websocket LOCAL_PATH=../../hc-websocket-js make npm-reinstall-$*
 
 
 #

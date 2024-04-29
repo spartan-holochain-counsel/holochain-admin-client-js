@@ -1,6 +1,7 @@
 
 import {
     DnaHash,
+    WasmHash,
     AgentPubKey,
 }					from '@spartan-hc/holo-hash';
 
@@ -128,6 +129,15 @@ export type AppInfoStatusRunning = {
 };
 export type AppInfoStatus = AppInfoStatusPaused | AppInfoStatusDisabled | AppInfoStatusRunning;
 
+export type AllowedOrigins =
+    | "*"
+    | Array<string>;
+export type AppInterfaceInfo = {
+    port		: Number;
+    allowed_origins	: AllowedOrigins;
+    installed_app_id   ?: string;
+};
+
 
 export interface BaseCell {
     dna_modifiers:	DnaModifiers;
@@ -187,11 +197,33 @@ export type CapabilityFunctions = "*" | Array<[string, string]> | Record<string,
 
 
 export type RegisterDnaInput = {
-    modifiers?: {
-	network_seed?: string | null;
-	properties?: any | null;
+    modifiers	       ?: {
+	network_seed   ?: string | null;
+	properties     ?: any | null;
     };
 } & Location;
+
+export type WasmDef = {
+    wasm_hash			: WasmHash;
+    dependencies		: Array<string>;
+    preserialized_path	       ?: string;
+};
+export type ZomeDef =
+    | WasmDef
+    | {
+	inline_zome		: Uint8Array;
+	dependencies		: Array<string>;
+    };
+
+export type IntegrityZomes = Array<[ string, ZomeDef ]>;
+export type CoordinatorZomes = Array<[ string, ZomeDef ]>;
+
+export type DnaDef = {
+    name		: string;
+    modifiers		: DnaModifiers;
+    integrity_zomes	: IntegrityZomes;
+    coordinator_zomes	: CoordinatorZomes;
+};
 
 export type InstallAppInput = {
     installed_app_id	: string;
@@ -199,3 +231,13 @@ export type InstallAppInput = {
     membrane_proofs?	: any,
     network_seed?	: string | null;
 } & Location;
+
+export type IssueAppAuthenticationTokenPayload = {
+    installed_app_id	: string;
+    expiry_seconds     ?: number;
+    single_use	       ?: boolean;
+};
+export type AppAuthenticationTokenIssued = {
+    token		: Uint8Array;
+    expired_at	       ?: number;
+};

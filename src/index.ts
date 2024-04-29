@@ -5,6 +5,7 @@ import {
     EntryHash,
     ActionHash,
     DnaHash,
+    WasmHash,
 }					from '@spartan-hc/holo-hash';
 import { encode, decode }		from '@msgpack/msgpack';
 import {
@@ -28,8 +29,11 @@ import {
     Installation,
     RegisterDnaInput,
     InstallAppInput,
+    AppInterfaceInfo,
+    DnaDef,
+    IssueAppAuthenticationTokenPayload,
+    AppAuthenticationTokenIssued,
 }					from './types.js';
-
 
 
 export async function sha512 ( bytes ) {
@@ -153,16 +157,19 @@ export class AdminClient {
 	    await conn.open();
 	}
 
+	log.debug && log("Calling '%s':", method, args );
 	return await conn.request( method, args, timeout );
     }
 
     async attachAppInterface (
 	port?			: number,
 	allowed_origins		: string = "*",
+	installed_app_id       ?: string,
     ) : Promise<{ port: number }> {
 	let resp			= await this.#request("attach_app_interface", {
 	    "port": port,
 	    allowed_origins,
+	    installed_app_id,
 	});
 
 	return resp;
@@ -220,6 +227,28 @@ export class AdminClient {
 
 	return new DnaHash( await this.#request("register_dna", input ) );
     }
+
+    async getDnaDefinition (
+	hash			: DnaHash,
+    ) : Promise<DnaDef> {
+	const dna_def			= await this.#request("get_dna_definition", hash );
+
+	dna_def.integrity_zomes.map( ([_, zome_def]) => {
+	    zome_def.wasm_hash		= new WasmHash(zome_def.wasm_hash);
+	});
+
+	dna_def.coordinator_zomes.map( ([_, zome_def]) => {
+	    zome_def.wasm_hash		= new WasmHash(zome_def.wasm_hash);
+	});
+
+	return dna_def;
+    }
+
+    // TODO:
+    // async updateCoordinators (
+    // 	input			: UpdateCoordinatorsPayload,
+    // ) : Promise<void> {
+    // }
 
     async installApp (
 	app_id			: string,
@@ -315,6 +344,10 @@ export class AdminClient {
 	return cells;
     }
 
+    async listCellIds () : Promise<Array<[ DnaHash, AgentPubKey ]>> {
+	return await this.listCells();
+    }
+
     async listApps (
 	status: string = "Running", // Holochain's default is 'Running'
     ) : Promise<Array<Installation>> {
@@ -336,11 +369,10 @@ export class AdminClient {
 	);
     }
 
-    async listAppInterfaces () : Promise<Array<number>> {
+    async listAppInterfaces () : Promise<Array<AppInterfaceInfo>> {
 	const ifaces			= await this.#request("list_app_interfaces");
-	ifaces.sort();
 
-	log.debug && log("Interfaces (%s): %s", ifaces.length, ifaces );
+	log.debug && log("Interfaces (%s):", ifaces.length, ifaces );
 	return ifaces;
     }
 
@@ -620,6 +652,16 @@ export class AdminClient {
 	await this.#request("grant_zome_call_capability", input );
 
 	return true;
+    }
+
+    async issueAppAuthenticationToken (
+	input			: IssueAppAuthenticationTokenPayload,
+    ) : Promise<AppAuthenticationTokenIssued> {
+	const issued_auth		= await this.#request("issue_app_authentication_token", input );
+
+	issued_auth.token		= new Uint8Array( issued_auth.token );
+
+	return issued_auth;
     }
 
     async close (
