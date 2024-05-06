@@ -19,10 +19,14 @@ node_modules:		package-lock.json
 	npm install
 	touch $@
 
-npm-reinstall%-local:
-	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save$* $(LOCAL_PATH)
-npm-reinstall%-public:
-	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save$* $(NPM_PACKAGE)
+npm-reinstall-local:
+	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save $(LOCAL_PATH)
+npm-reinstall-public:
+	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save $(NPM_PACKAGE)
+npm-reinstall-dev-local:
+	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save-dev $(LOCAL_PATH)
+npm-reinstall-dev-public:
+	cd tests; npm uninstall $(NPM_PACKAGE); npm i --save-dev $(NPM_PACKAGE)
 
 npm-use-backdrop-public:
 npm-use-backdrop-local:

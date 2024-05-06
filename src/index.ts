@@ -59,15 +59,13 @@ function normalize_granted_functions ( granted_functions ) {
     if ( granted_functions === undefined )
 	throw new TypeError(`Invalid granted functions input; expected *, array<(zome, fn)>, or object<zome, array<fn>>`);
 
-    if ( granted_functions === "*" )
-	granted_functions		= null;
+    const functions_input		= granted_functions === "*"
+	? "All"
+	: {
+	    "Listed": granted_functions,
+	};
 
-    const functions_type		= granted_functions === null ? "All" : "Listed";
-    const functions_input		= {
-	[functions_type]: granted_functions,
-    };
-
-    if ( granted_functions === null || Array.isArray( granted_functions ) )
+    if ( granted_functions === "*" || Array.isArray( granted_functions ) )
 	return functions_input;
 
     const functions		= [];
@@ -82,7 +80,7 @@ function normalize_granted_functions ( granted_functions ) {
 	    functions.push( [ zome_name, fn_name ] );
 	}
     }
-    functions_input[ functions_type ]	= functions;
+    functions_input["Listed"]		= functions;
 
     return functions_input;
 }
@@ -358,9 +356,7 @@ export class AdminClient {
 	// Paused,
 	status				= status.charAt(0).toUpperCase() + status.slice(1);
 	const apps			= await this.#request("list_apps", {
-	    "status_filter": {
-		[status]: null,
-	    },
+	    "status_filter": status,
 	});
 
 	log.debug && log("Apps (%s): %s", apps.length, apps.map( x => x.installed_app_id ).join(", ") );
@@ -583,9 +579,7 @@ export class AdminClient {
 	    "cap_grant": {
 		"tag": tag,
 		"functions": normalize_granted_functions( functions ),
-		"access": {
-		    "Unrestricted": null,
-		},
+		"access": "Unrestricted",
 	    },
 	};
 
@@ -662,6 +656,14 @@ export class AdminClient {
 	issued_auth.token		= new Uint8Array( issued_auth.token );
 
 	return issued_auth;
+    }
+
+    async revokeAppAuthenticationToken (
+	token			: Uint8Array,
+    ) : Promise<void> {
+	// Authenticate input requires the token to be an Array
+	const token_input		= [ ...token ];
+	await this.#request("revoke_app_authentication_token", token_input );
     }
 
     async close (

@@ -124,9 +124,7 @@ export type AppInfoStatusDisabled = {
         reason: DisabledAppReason;
     };
 };
-export type AppInfoStatusRunning = {
-    running: null;
-};
+export type AppInfoStatusRunning = "running";
 export type AppInfoStatus = AppInfoStatusPaused | AppInfoStatusDisabled | AppInfoStatusRunning;
 
 export type AllowedOrigins =

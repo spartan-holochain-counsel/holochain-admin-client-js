@@ -64,7 +64,7 @@ export async function reformat_app_info ( app_info: AppInfo ) : Promise<Installa
 	"installed_app_id":	app_info.installed_app_id,
 	"manifest":		app_info.manifest,
 	"roles":		{},
-	"running":		"running" in app_info.status,
+	"running":		app_info.status === "running",
 	"status":		app_info.status,
     };
 

@@ -268,6 +268,8 @@ function basic_tests () {
 	expect( succeeded		).to.be.true;
     });
 
+    let auth_token;
+
     it("should create authentication token", async function () {
 	const auth			= await admin.issueAppAuthenticationToken({
 	    "installed_app_id":		TEST_APP_ID,
@@ -275,9 +277,14 @@ function basic_tests () {
 	});
 
 	log.normal("Issued Authentication Token: %s", json.debug(auth) );
+	auth_token			= auth.token;
 
 	expect( auth.token		).to.be.a("Uint8Array");
-	expect( auth.expires_at		).to.be.a("number");
+	expect( auth.expires_at		).to.be.null;
+    });
+
+    it("should revoke authentication token", async function () {
+	await admin.revokeAppAuthenticationToken( auth_token );
     });
 
     it("should disable app", async function () {
