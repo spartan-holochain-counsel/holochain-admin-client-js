@@ -273,6 +273,7 @@ function basic_tests () {
     it("should create authentication token", async function () {
 	const auth			= await admin.issueAppAuthenticationToken({
 	    "installed_app_id":		TEST_APP_ID,
+	    "single_use":		false,
 	    "expiry_seconds":		0,
 	});
 

@@ -23,7 +23,7 @@
   "dependencies": {
     "@msgpack/msgpack": "^2.7.0",
     "@spartan-hc/holo-hash": "^0.6.1",
-    "@spartan-hc/holochain-websocket": "^1.3.1"
+    "@spartan-hc/holochain-websocket": "^1.3.2"
   },
   "devDependencies": {
     "@spartan-hc/holochain-backdrop": "^4.1.0",
