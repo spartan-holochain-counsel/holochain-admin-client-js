@@ -12,7 +12,8 @@
   "files": [
     "README.md",
     "lib/**",
-    "dist/**"
+    "dist/**",
+    "bin/lib/**"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
