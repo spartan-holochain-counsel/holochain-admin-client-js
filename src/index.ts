@@ -7,6 +7,7 @@ import {
     DnaHash,
     WasmHash,
 }					from '@spartan-hc/holo-hash';
+import { Bytes }			from '@whi/bytes-class';
 import { encode, decode }		from '@msgpack/msgpack';
 import {
     Connection,
@@ -14,11 +15,14 @@ import {
 }					from '@spartan-hc/holochain-websocket';
 import HolochainWebsocket		from '@spartan-hc/holochain-websocket';
 
-import { log,
-	 reformat_app_info,
-	 reformat_cell_id,
-	 reformat_cell_errors,
-	 set_tostringtag }		from './utils.js';
+import {
+    log,
+    reformat_app_info,
+    reformat_cell_id,
+    reformat_cell_errors,
+    set_tostringtag,
+    is_non_negative_number,
+}					from './utils.js';
 import { DeprecationNotice }		from './errors.js';
 import {
     Location,
@@ -33,6 +37,7 @@ import {
     DnaDef,
     IssueAppAuthenticationTokenPayload,
     AppAuthenticationTokenIssued,
+    AllowedOrigins,
 }					from './types.js';
 
 
@@ -84,7 +89,6 @@ function normalize_granted_functions ( granted_functions ) {
 
     return functions_input;
 }
-
 
 
 function deep_compare ( a, b ) {
@@ -161,9 +165,13 @@ export class AdminClient {
 
     async attachAppInterface (
 	port?			: number,
-	allowed_origins		: string = "*",
-	installed_app_id       ?: string,
+	allowed_origins_input	: AllowedOrigins = "*",
+	installed_app_id	: string | null = null,
     ) : Promise<{ port: number }> {
+	const allowed_origins		= Array.isArray(allowed_origins_input)
+	    ? allowed_origins_input.join(", ")
+	    : allowed_origins_input;
+
 	let resp			= await this.#request("attach_app_interface", {
 	    "port": port,
 	    allowed_origins,
@@ -175,15 +183,19 @@ export class AdminClient {
 
     async addAdminInterface (
 	port			: number,
-	allowed_origins	       ?: string,
+	allowed_origins_input  ?: AllowedOrigins,
     ) : Promise<void> {
-	return await this.addAdminInterfaces( [ port ], allowed_origins );
+	return await this.addAdminInterfaces( [ port ], allowed_origins_input );
     }
 
     async addAdminInterfaces (
 	ports			: Array<number>,
-	allowed_origins		: string = "*",
+	allowed_origins_input	: AllowedOrigins = "*",
     ) : Promise<void> {
+	const allowed_origins		= Array.isArray(allowed_origins_input)
+	    ? allowed_origins_input.join(", ")
+	    : allowed_origins_input;
+
 	let resp			= await this.#request("add_admin_interfaces", ports.map( port => {
 	    return {
 		"driver": {
@@ -217,6 +229,20 @@ export class AdminClient {
 	let location : Location		= path instanceof DnaHash
 	    ? { "hash": path as DnaHash }
 	    : { "path": path as string };
+
+	if ( modifiers.quantum_time ) {
+	    // Quantum time can be a tuple of [ seconds, nanoseconds ]
+	    if ( Array.isArray( modifiers.quantum_time ) ) {
+		if ( modifiers.quantum_time.length !== 2 )
+		    throw new TypeError(`Quantum time array format expects a pair of [ seconds, nanoseconds ]; not '[${modifiers.quantum_time}]'`);
+
+		if ( !is_non_negative_number( modifiers.quantum_time[0] ) )
+		    throw new TypeError(`Quantum time array format expects seconds to be a positive number; not '${modifiers.quantum_time[0]}'`);
+
+		if ( !is_non_negative_number( modifiers.quantum_time[1] ) )
+		    throw new TypeError(`Quantum time array format expects nanoseconds to be a positive number; not '${modifiers.quantum_time[1]}'`);
+	    }
+	}
 
 	let input : RegisterDnaInput	= {
 	    modifiers,
@@ -368,11 +394,20 @@ export class AdminClient {
     async listAppInterfaces () : Promise<Array<AppInterfaceInfo>> {
 	const ifaces			= await this.#request("list_app_interfaces");
 
+	for ( let i in ifaces ) {
+	    const allowed_origins	= ifaces[i].allowed_origins;
+
+	    if ( typeof allowed_origins === "string" && allowed_origins !== "*" ) {
+		ifaces[i].allowed_origins	= allowed_origins.split(",");
+		ifaces[i].allowed_origins.sort();
+	    }
+	}
+
 	log.debug && log("Interfaces (%s):", ifaces.length, ifaces );
 	return ifaces;
     }
 
-    async listAgents () : Promise<Array<AgentPubKey>> {
+    async listActiveAgents () : Promise<Array<AgentPubKey>> {
 	const agent_infos			= await this.requestAgentInfo();
 	const cell_agents			= agent_infos.map( info => info.agent.toString() );
 
@@ -540,11 +575,11 @@ export class AdminClient {
 
 	infos.forEach( (info, i) => {
 	    info.agent			= new AgentPubKey( info.agent );
-	    info.signature		= new Uint8Array( info.signature );
+	    info.signature		= new Bytes( info.signature );
 	    info.agent_info		= decode( info.agent_info );
 
-	    info.agent_info.agent	= new Uint8Array( info.agent_info.agent );
-	    info.agent_info.space	= new Uint8Array( info.agent_info.space );
+	    info.agent_info.agent	= new AgentPubKey( info.agent_info.agent );
+	    info.agent_info.space	= new Bytes( info.agent_info.space );
 	    info.agent_info.meta_info	= decode( info.agent_info.meta_info );
 	});
 
@@ -653,7 +688,7 @@ export class AdminClient {
     ) : Promise<AppAuthenticationTokenIssued> {
 	const issued_auth		= await this.#request("issue_app_authentication_token", input );
 
-	issued_auth.token		= new Uint8Array( issued_auth.token );
+	issued_auth.token		= new Bytes( issued_auth.token );
 
 	return issued_auth;
     }

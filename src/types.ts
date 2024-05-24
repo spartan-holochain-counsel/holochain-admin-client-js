@@ -129,6 +129,7 @@ export type AppInfoStatus = AppInfoStatusPaused | AppInfoStatusDisabled | AppInf
 
 export type AllowedOrigins =
     | "*"
+    | string
     | Array<string>;
 export type AppInterfaceInfo = {
     port		: Number;

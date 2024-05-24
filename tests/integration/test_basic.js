@@ -202,7 +202,7 @@ function basic_tests () {
     });
 
     it("should list agents", async function () {
-	const agents			= await admin.listAgents();
+	const agents			= await admin.listActiveAgents();
 
 	expect( agents			).to.have.length( 1 );
 	expect( agents[0]		).to.deep.equal( agent_hash );

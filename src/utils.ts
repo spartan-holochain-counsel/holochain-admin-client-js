@@ -118,3 +118,10 @@ export function log ( msg: string, ...args: Array<any> ) : void {
     console.log(`${datetime} [ src/index. ]  INFO: ${msg}`, ...args );
 }
 log.debug				= false;
+
+
+export function is_non_negative_number ( value ) {
+    return typeof value === "number"
+	&& !isNaN(value)
+	&& value >= 0;
+}

@@ -377,14 +377,14 @@ await admin.listAppInterfaces();
 ```
 
 
-### `<AdminClient>.listAgents() -> Promise<array<AgentPubKey>>`
+### `<AdminClient>.listActiveAgents() -> Promise<array<AgentPubKey>>`
 Get the list of active Agents.
 
 Returns a Promise that resolves with the list of Agent pubkeys
 
 Example
 ```javascript
-await admin.listAgents();
+await admin.listActiveAgents();
 // [
 //     AgentPubKey(39) [
 //       132,  32,  36,  93, 157,  91,  70, 192,

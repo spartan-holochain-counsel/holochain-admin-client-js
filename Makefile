@@ -3,11 +3,16 @@
 #
 # Building
 #
-build:			FORCE lib/node.js
+build:			FORCE lib/node.js bin/lib/index.js
 lib/node.js:		node_modules src/*.ts Makefile
 	rm -f lib/*.js
 	npx tsc -t es2022 -m es2022 --moduleResolution node --esModuleInterop \
 		--outDir lib -d --sourceMap src/node.ts
+bin/lib/index.js:	node_modules bin/src/*.ts Makefile
+	rm -f bin/lib/*.js
+	cd bin; npx tsc -t es2022 -m es2022 --moduleResolution node --esModuleInterop \
+		--outDir lib -d --sourceMap src/index.ts
+	chmod a+x $@
 
 
 #
