@@ -160,7 +160,7 @@ export class AdminClient {
 	}
 
 	log.debug && log("Calling '%s':", method, args );
-	return await conn.request( method, args, timeout );
+	return await conn.request( method, args, timeout ?? 30_000 );
     }
 
     async attachAppInterface (
@@ -316,7 +316,7 @@ export class AdminClient {
 	    }
 	}
 
-	const app_info			= await this.#request("install_app", input );
+	const app_info			= await this.#request("install_app", input, 60_000 );
 
 	return await reformat_app_info( app_info );
     }
