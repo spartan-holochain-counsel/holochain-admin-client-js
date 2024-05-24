@@ -38,7 +38,7 @@ export default function ( program, action_context, auto_help ) {
 		const opts		= this.opts();
 		const result		= await admin.attachAppInterface(
 		    port,
-		    opts.allowedOrigins.join(","),
+		    opts.allowedOrigins,
 		    opts.appId,
 		);
 
