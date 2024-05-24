@@ -174,7 +174,10 @@ if ( typeof process?.mainModule?.filename !== "string" ) {
 	}
     } catch (err) {
 	if ( err.code?.startsWith("commander") ) {
-	    if ( !err.message.includes("outputHelp") )
+	    if ( !(
+		err.code.includes("helpDisplayed")
+		|| err.code.includes("version")
+	    ))
 		console.log(`\x1b[31m${err.message}\x1b[0m`);
 	}
 	else
