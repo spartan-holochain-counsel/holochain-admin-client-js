@@ -31,7 +31,7 @@ export default function ( program, action_context, auto_help ) {
 	.command("create")
 	.description("Attach app interface")
 	.argument("[port]", "Set a specific app port", parseInt )
-	.option("-o, --allowed-origins <string>", "Set allowed origins (default: *)", buildList, "*" )
+	.option("-o, --allowed-origins <string>", "Set allowed origins", buildList, "*" )
 	.option("-i, --app-id <string>", "limit interface to a specific installed app ID")
 	.action(
 	    action_context(async function ({ log, admin }, port ) {
@@ -54,12 +54,12 @@ export default function ( program, action_context, auto_help ) {
     admin_subprogram
 	.command("create")
 	.description("Add admin interface")
-	.argument("[port]", "Set a specific app port", parseInt )
-	.option("-o, --allowed-origins <string>", "Set allowed origins (default: *)", buildList, "*" )
+	.argument("<port>", "Set a specific admin port", parseInt )
+	.option("-o, --allowed-origins <string>", "Set allowed origins", buildList, "*" )
 	.action(
 	    action_context(async function ({ log, admin }, port ) {
 		const opts		= this.opts();
-		const result		= await admin.attachAppInterface(
+		const result		= await admin.addAdminInterface(
 		    port,
 		    opts.allowedOrigins,
 		);

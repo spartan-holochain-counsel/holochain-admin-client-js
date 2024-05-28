@@ -26,7 +26,7 @@ export default function ( program, action_context, auto_help ) {
 	.argument("<tag>", "Cap grant tag (name)")
 	.argument("<agent>", "Cell agent")
 	.argument("<dna>", "Cell DNA hash")
-	.option("-f, --function <string>", "add 'zome:function' to functions list (default: *)", buildList, "*" )
+	.option("-f, --function <string>", "add 'zome:function' to functions list", buildList, "*" )
 	.action(
 	    action_context(async function ({ log, admin }, tag, agent, dna_hash ) {
 		const opts		= this.opts();
@@ -53,7 +53,7 @@ export default function ( program, action_context, auto_help ) {
 	.argument("<agent>", "Cell agent")
 	.argument("<dna>", "Cell DNA hash")
 	.argument("<secret>", "Capability secret")
-	.option("-f, --function <string>", "add 'zome:function' to functions list (default: *)", buildList, "*" )
+	.option("-f, --function <string>", "add 'zome:function' to functions list", buildList, "*" )
 	.option("--no-parse-secret", "keep secret input as a string")
 	.action(
 	    action_context(async function ({ log, admin }, tag, agent, dna_hash, secret_input ) {
@@ -86,7 +86,7 @@ export default function ( program, action_context, auto_help ) {
 	.argument("<dna>", "Cell DNA hash")
 	.argument("<secret>", "Capability secret")
 	.argument("<assignees...>", "Assigned agents")
-	.option("-f, --function <string>", "add 'zome:function' to functions list (default: *)", buildList, "*" )
+	.option("-f, --function <string>", "add 'zome:function' to functions list", buildList, "*" )
 	.option("--no-parse-secret", "keep secret input as a string")
 	.action(
 	    action_context(async function ({ log, admin }, tag, agent, dna_hash, secret_input, assignees ) {

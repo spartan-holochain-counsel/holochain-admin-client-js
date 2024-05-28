@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// -*- mode: typescript -*-
 import { Logger }			from '@whi/weblogger';
 const log				= new Logger("hc-admin", "fatal" );
 
@@ -6,7 +7,10 @@ import fs				from 'fs/promises';
 import path				from 'path';
 
 import json				from '@whi/json';
-import { Command }			from 'commander';
+import {
+    Command,
+    Option,
+}					from 'commander';
 import {
     AdminClient,
 }					from '../../lib/node.js';
@@ -93,7 +97,14 @@ export async function main ( argv ) {
 	.option("-v, --verbose", "increase logging verbosity", increaseTotal, 0 )
 	.option("-q, --quiet", "suppress all printing except for final result", false )
 	.option("-p, --admin-port <port>", "set the admin port for connecting to the Holochain Conductor", parseInt )
-	.option("-t, --timeout <timeout>", "set timeout for Holochain start-up (default 60 seconds)", parseInt )
+	.addOption(
+	    (new Option(
+		"-t, --timeout <number>",
+		"set the default timeout for admin calls",
+	    ))
+		.argParser( parseInt )
+		.default( 60_000, "60s" )
+	)
 	.hook("preAction", async function (self) {
 	    const opts			= self.opts();
 
@@ -120,7 +131,9 @@ export async function main ( argv ) {
 	    }
 
 	    // Setup the clients that all subcommands would use
-	    admin			= new AdminClient( opts.adminPort );
+	    admin			= new AdminClient( opts.adminPort, {
+		"timeout":	opts.timeout,
+	    });
 	})
 	// Control commander's output/error write behavior
 	.configureOutput({
