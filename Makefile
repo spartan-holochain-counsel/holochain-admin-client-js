@@ -14,6 +14,15 @@ bin/lib/index.js:	node_modules bin/src/*.ts Makefile
 		--outDir lib -d --sourceMap src/index.ts
 	chmod a+x $@
 
+bin-build-watch:
+	@cd bin; inotifywait -r -m -e modify	\
+		--includei '.*\.ts'		\
+			src/			\
+	| while read -r dir event file; do	\
+		echo -e "\x1b[37m$$event $$dir$$file\x1b[0m";\
+		make lib/index.js;		\
+	done
+
 
 #
 # Project
