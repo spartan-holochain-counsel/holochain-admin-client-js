@@ -37,14 +37,13 @@
   },
   "devDependencies": {
     "@spartan-hc/holochain-backdrop": "^4.1.0",
-    "@whi/http": "^0.2.3",
-    "chai": "^4.3.4",
-    "mocha": "^10.1.0",
-    "puppeteer": "^19.8.5",
+    "chai": "^5.1.1",
+    "mocha": "^10.6.0",
+    "puppeteer": "^22.13.1",
     "tweetnacl": "^1.0.3",
     "typescript": "^5.3.3",
-    "webpack": "^5.76.3",
-    "webpack-cli": "^4.7.2",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4",
     "why-is-node-running": "^2.2.0"
   }
 }
