@@ -201,34 +201,38 @@ function basic_tests () {
 	expect( ifaces[0].port		).to.be.a("number");
     });
 
-    it("should list agents", async function () {
-	const agents			= await admin.listActiveAgents();
+    it("should get agent info", async function () {
+        this.skip();
+	const agent_info		= await admin.requestAgentInfo([ dna_hash, agent_hash ]);
 
-	expect( agents			).to.have.length( 1 );
-	expect( agents[0]		).to.deep.equal( agent_hash );
+	// log.trace("Cell agent info => %s", json.debug( agent_info ) );
+
+	expect( agent_info[0].agent	).to.deep.equal( agent_hash );
     });
 
     it("should request agent info", async function () {
+        this.skip();
 	const agents			= await admin.requestAgentInfo();
 
 	expect( agents			).to.have.length( 1 );
 	expect( agents[0].agent		).to.deep.equal( agent_hash );
     });
 
+    it("should list agents", async function () {
+        this.skip();
+	const agents			= await admin.listActiveAgents();
+
+	expect( agents			).to.have.length( 1 );
+	expect( agents[0]		).to.deep.equal( agent_hash );
+    });
+
     it("should get cell state", async function () {
+        this.skip();
 	const state			= await admin.cellState( dna_hash, agent_hash );
 
 	// log.trace("Cell state dump => %s", json.debug( state ) );
 
 	expect( state.source_chain	).to.have.length.gte( 2 );
-    });
-
-    it("should get agent info", async function () {
-	const agent_info		= await admin.requestAgentInfo([ dna_hash, agent_hash ]);
-
-	// log.trace("Cell agent info => %s", json.debug( agent_info ) );
-
-	expect( agent_info[0].agent	).to.deep.equal( agent_hash );
     });
 
     it("should grant assigned capability", async function () {

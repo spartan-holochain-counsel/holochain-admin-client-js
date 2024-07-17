@@ -49,8 +49,9 @@ export async function sha512 ( bytes ) {
 }
 
 
-async function hash_secret ( secret ) {
-    return new Uint8Array( await sha512( secret ) );
+const encoder                           = new TextEncoder();
+async function hash_secret ( secret : string ) {
+    return new Uint8Array( await sha512( encoder.encode(secret) ) );
 }
 
 
