@@ -23,11 +23,11 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build Packages
-        run: nix develop make build
+        run: nix develop --command make build
 
       - name: Run Tests
         run: |
-          output=$(DEBUG_LEVEL=trace nix develop make test | tee >(cat >&2))
+          output=$(DEBUG_LEVEL=trace nix develop --command make test | tee >(cat >&2))
           passing=$(echo "$output" | grep -oP '\d+ passing' | grep -oP '\d+' || echo 0)
           failing=$(echo "$output" | grep -oP '\d+ failing' | grep -oP '\d+' || echo 0)
           pending=$(echo "$output" | grep -oP '\d+ pending' | grep -oP '\d+' || echo 0)
