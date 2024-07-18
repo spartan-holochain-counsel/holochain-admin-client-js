@@ -202,7 +202,6 @@ function basic_tests () {
     });
 
     it("should get agent info", async function () {
-        this.skip();
 	const agent_info		= await admin.requestAgentInfo([ dna_hash, agent_hash ]);
 
 	// log.trace("Cell agent info => %s", json.debug( agent_info ) );
@@ -211,7 +210,6 @@ function basic_tests () {
     });
 
     it("should request agent info", async function () {
-        this.skip();
 	const agents			= await admin.requestAgentInfo();
 
 	expect( agents			).to.have.length( 1 );
@@ -219,7 +217,6 @@ function basic_tests () {
     });
 
     it("should list agents", async function () {
-        this.skip();
 	const agents			= await admin.listActiveAgents();
 
 	expect( agents			).to.have.length( 1 );
@@ -227,7 +224,6 @@ function basic_tests () {
     });
 
     it("should get cell state", async function () {
-        this.skip();
 	const state			= await admin.cellState( dna_hash, agent_hash );
 
 	// log.trace("Cell state dump => %s", json.debug( state ) );
