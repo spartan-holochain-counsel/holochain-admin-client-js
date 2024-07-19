@@ -58,7 +58,7 @@ npm-use-websocket-%:
 #
 DEBUG_LEVEL	       ?= warn
 TEST_ENV_VARS		= LOG_LEVEL=$(DEBUG_LEVEL)
-MOCHA_OPTS		= -t 15000 -n enable-source-maps
+MOCHA_OPTS		= -t 15000 -n enable-source-maps --color
 
 test-server:
 	python3 -m http.server 8765

@@ -23,7 +23,8 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Build Packages
-        run: nix develop --command make build
+        run: |
+          nix develop --command make build
 
       - name: Run Tests
         run: |
@@ -36,3 +37,4 @@ jobs:
           echo "| Passed   | Failed   | Pending  |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|----------|----------|" >> $GITHUB_STEP_SUMMARY
           echo "| $passing | $failing | $pending |" >> $GITHUB_STEP_SUMMARY
+          if [ "$failing" -ne 0 ]; then exit 1; fi
