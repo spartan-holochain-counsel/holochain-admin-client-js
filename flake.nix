@@ -19,7 +19,6 @@
           buildInputs = with pkgs; [
             holochain_0-4
             lair-keystore_0-4-5
-            hc_0-4
 
             nodejs_22
           ];
