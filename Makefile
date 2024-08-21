@@ -52,13 +52,18 @@ npm-use-websocket-local:
 npm-use-websocket-%:
 	NPM_PACKAGE=@spartan-hc/holochain-websocket LOCAL_PATH=../../hc-websocket-js make npm-reinstall-$*
 
+npm-use-holo-hash-public:
+npm-use-holo-hash-local:
+npm-use-holo-hash-%:
+	NPM_PACKAGE=@spartan-hc/holo-hash LOCAL_PATH=../../holo-hash-js make npm-reinstall-$*
+
 
 #
 # Testing
 #
 DEBUG_LEVEL	       ?= warn
 TEST_ENV_VARS		= LOG_LEVEL=$(DEBUG_LEVEL)
-MOCHA_OPTS		= -t 15000 -n enable-source-maps
+MOCHA_OPTS		= -t 15000 -n enable-source-maps --color
 
 test-server:
 	python3 -m http.server 8765
