@@ -7,6 +7,12 @@ import {
     DnaHash,
     WasmHash,
 }					from '@spartan-hc/holo-hash';
+import {
+    intoStruct,
+    AnyType, OptionType,
+    VecType, MapType,
+}                                       from '@whi/into-struct';
+import json                             from '@whi/json';
 import { Bytes }			from '@whi/bytes-class';
 import { encode, decode }		from '@msgpack/msgpack';
 import {
@@ -24,6 +30,10 @@ import {
     is_non_negative_number,
 }					from './utils.js';
 import { DeprecationNotice }		from './errors.js';
+import {
+    StateResponse,
+    FullStateResponse,
+}                                       from './structs.js';
 import {
     Location,
     LocationValue,
@@ -160,7 +170,7 @@ export class AdminClient {
 	    await conn.open();
 	}
 
-	log.debug && log("Calling '%s':", method, args );
+	log.debug && log("Calling '%s': %s", method, json.debug(args) );
 	return await conn.request( method, args, timeout ?? 30_000 );
     }
 
@@ -410,7 +420,7 @@ export class AdminClient {
 
     async listActiveAgents () : Promise<Array<AgentPubKey>> {
 	const agent_infos			= await this.requestAgentInfo();
-	const cell_agents			= agent_infos.map( info => info.agent.toString() );
+	const cell_agents : Uint8Array[]	= agent_infos.map( info => info.agent.toString() );
 
 	const unique_agents			= [ ...new Set( cell_agents ) ]
 	      .map( hash => new AgentPubKey(hash) );
@@ -423,8 +433,6 @@ export class AdminClient {
     async cellState (
 	dna_hash:	DnaHash,
 	agent_hash:	AgentPubKey,
-	start?:		number,
-	end?:		number,
     ) {
 	const state_json		= await this.#request("dump_state", {
 	    "cell_id": [
@@ -433,138 +441,26 @@ export class AdminClient {
 	    ],
 	});
 	const state_resp		= JSON.parse( state_json );
-	const state			= state_resp[0];
-	const state_summary		= state_resp[1]; // string
 
-	// state.peer_dump.this_agent_info.kitsune_agent
-	// state.peer_dump.this_agent_info.kitsune_space
-	// state.peer_dump.this_agent_info.dump
-	// state.peer_dump.this_dna[0]
-	// state.peer_dump.this_dna[1]
-	// state.peer_dump.this_agent[0]
-	// state.peer_dump.this_agent[1]
-	// state.peer_dump.peers[]
-	// state.source_chain_dump.records[0].signature
-	// state.source_chain_dump.records[0].action_address
-	// state.source_chain_dump.records[0].action.type
-	// state.source_chain_dump.records[0].action.author
-	// state.source_chain_dump.records[0].action.timestamp[0]
-	// state.source_chain_dump.records[0].action.timestamp[1]
-	// state.source_chain_dump.records[0].action.hash
-	// state.source_chain_dump.records[0].action.action_seq
-	// state.source_chain_dump.records[0].action.prev_action
-	// state.source_chain_dump.records[0].action.entry_type{App?}
-	// state.source_chain_dump.records[0].action.entry_hash
-	// state.source_chain_dump.records[0].entry.entry_type = "App"
-	// state.source_chain_dump.records[0].entry.entry
-	function agent_info ( agent_info ) {
-	    return {
-		"agent": new Uint8Array( agent_info.kitsune_agent ),
-		"space": new Uint8Array( agent_info.kitsune_space ),
-	    };
-	}
+	// console.log("State Dump raw: %s", json.debug( state_resp ) );
 
-	state.kitsune			= agent_info( state.peer_dump.this_agent_info );
-	state.cell			= {
-	    "agent": new AgentPubKey(	new Uint8Array(state.peer_dump.this_agent[0]) ),
-	    "dna":   new DnaHash(	new Uint8Array(state.peer_dump.this_dna[0])   ),
-	};
-	state.peers			= state.peer_dump.peers.map( (peer_agent_info) => {
-	    return agent_info( peer_agent_info );
+        return intoStruct( state_resp, StateResponse )[0];
+    }
+
+    async cellStateFull (
+	dna_hash:	DnaHash,
+	agent_hash:	AgentPubKey,
+    ) {
+	const state_resp		= await this.#request("dump_full_state", {
+	    "cell_id": [
+		new DnaHash( dna_hash ),
+		new AgentPubKey( agent_hash ),
+	    ],
 	});
 
-	delete state.peer_dump;
+	// console.log("State Dump raw: %s", json.debug( state_resp ) );
 
-	if ( start || end ) {
-	    state.source_chain_dump.records	= state.source_chain_dump.records.slice( start, end );
-	}
-
-	state.source_chain_dump.records.forEach( (record, i) => {
-	    record.signature			= new Uint8Array( record.signature );
-	    record.action_address		= new ActionHash(  new Uint8Array(record.action_address) );
-	    record.action.author		= new AgentPubKey( new Uint8Array(record.action.author) );
-
-	    if ( record.action.hash )
-		record.action.hash		= new HoloHash(    new Uint8Array(record.action.hash) );
-
-	    if ( record.action.prev_action )
-		record.action.prev_action	= new ActionHash(  new Uint8Array(record.action.prev_action) );
-
-	    if ( record.action.entry_hash ) {
-		record.action.entry_hash	= new EntryHash(   new Uint8Array(record.action.entry_hash) );
-		try {
-		    const length		= record.entry.entry.length;
-		    record.entry.entry		= decode( record.entry.entry );
-		    record.entry.length	= length;
-		} catch (err) {
-		    record.entry.entry		= new Uint8Array( record.entry.entry );
-		}
-	    }
-
-	    // CreateLink properties
-	    if ( record.action.base_address )
-		record.action.base_address	= new EntryHash(   new Uint8Array(record.action.base_address) );
-	    if ( record.action.target_address )
-		record.action.target_address	= new EntryHash(   new Uint8Array(record.action.target_address) );
-
-	    if ( record.action.tag ) {
-		const prefix			= record.action.tag.slice(0,8).map( n => String.fromCharCode(n) ).join("");
-
-		if ( prefix === "hdk.path" ) {
-		    const bytes			= record.action.tag.slice(11);
-		    const segments		= [];
-		    let segment			= [];
-		    let uint32			= [];
-		    bytes.forEach( (n, i) => {
-			// If we are at the start of a new byte
-			if ( n !== 0
-			     && bytes[i-1] === 0
-			     && bytes[i-2] === 0
-			     && bytes[i-3] === 0 ) {
-			    // If the length is greater than 4, then we want to reset the segment as
-			    // well as the uint32
-			    if ( uint32.length > 4 ) {
-				segments.push( new Uint8Array(segment) );
-
-				segment		= [];
-				segment.push( ...uint32.slice(-4) );
-
-				uint32		= [];
-			    }
-			    else {
-				segment.push( ...uint32 );
-				uint32		= [];
-			    }
-			}
-
-			uint32.push( n );
-		    });
-
-		    segment.push( ...uint32 );
-		    segments.push( new Uint8Array(segment) );
-
-
-		    segments.forEach( (seg, i) => {
-			const codes		= new Uint32Array( seg.buffer, seg.byteOffset, seg.byteLength / 4 );
-			segments[i]		= [].map.call( codes, n => String.fromCharCode(n) ).join("");
-		    });
-
-		    record.action.tag_string	= segments.join(".");
-		}
-		else {
-		    record.action.tag_string	= "hdk.path(" + record.action.tag.map( n => String.fromCharCode(n) ).join("") + ")";
-		}
-
-		record.action.tag		= new Uint8Array( record.action.tag );
-	    }
-	});
-
-	state.published_ops_count		= state.source_chain_dump.published_ops_count;
-	state.source_chain			= state.source_chain_dump.records;
-
-	delete state.source_chain_dump;
-
-	return state;
+        return intoStruct( state_resp, FullStateResponse );
     }
 
     async requestAgentInfo (
