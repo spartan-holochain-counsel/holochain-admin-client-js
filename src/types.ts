@@ -6,6 +6,7 @@ import {
 }					from '@spartan-hc/holo-hash';
 
 
+export type Option<T> = T | null | undefined;
 export interface Duration {
     secs:		number;
     nanos:		number;
@@ -35,6 +36,11 @@ export type DnaModifiersDecoded = {
 };
 
 export type CellId = [ DnaHash, AgentPubKey ];
+export type CellIdWithContext = {
+    app_id:             string | null;
+    role_id:            string | null;
+    cell_id:            CellId;
+};
 
 
 export type ZomeDependency = {

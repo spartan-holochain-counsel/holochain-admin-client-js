@@ -35,9 +35,11 @@ import {
     FullStateResponse,
 }                                       from './structs.js';
 import {
+    Option,
     Location,
     LocationValue,
     CellId,
+    CellIdWithContext,
     CapabilitySecret,
     CapabilityFunctions,
     Installation,
@@ -84,7 +86,7 @@ function normalize_granted_functions ( granted_functions ) {
     if ( granted_functions === "*" || Array.isArray( granted_functions ) )
 	return functions_input;
 
-    const functions		= [];
+    const functions		= [] as Array<[string, string]>;
     for ( let zome_name in granted_functions ) {
 	if ( !Array.isArray( granted_functions[ zome_name ] ) )
 	    throw new TypeError(`Invalid granted functions object; functions must be an array, not type '${typeof granted_functions[ zome_name ]}'`);
@@ -367,7 +369,7 @@ export class AdminClient {
 	return dnas;
     }
 
-    async listCells () : Promise<Array<[ DnaHash, AgentPubKey ]>> {
+    async listCells () : Promise<Array<CellId>> {
 	const cells			= await this.#request("list_cell_ids");
 
 	cells.forEach( (cell, i) => {
@@ -376,11 +378,78 @@ export class AdminClient {
 	cells.sort( deep_compare );
 
 	log.debug && log("Cells (%s): %s", cells.length, JSON.stringify( cells ) );
-	return cells;
+        return cells;
     }
 
-    async listCellIds () : Promise<Array<[ DnaHash, AgentPubKey ]>> {
-	return await this.listCells();
+    async listCellsWithContext (
+        app_id      : Option<string>    = null,
+    ) : Promise<Array<CellIdWithContext>> {
+	const cells		        = await this.listCells();
+	const apps		        = await this.listApps();
+        const cell_id_map               = {};
+
+        // Create map of context => cell ID
+        for ( let app of apps ) {
+            for ( let [name, role] of Object.entries(app.roles) ) {
+                if ( !role.cell_id )
+                    continue;
+
+                const dna               = role.cell_id[0];
+                const agent             = role.cell_id[1];
+
+                cell_id_map[`${agent}::${dna}`] = {
+                    "app_name":     app.installed_app_id,
+                    "role_name":    name,
+                };
+            }
+        }
+
+        // Match cells to context
+        return cells
+            .map( ([ dna_hash, agent_pubkey ]) => {
+                const ctx               = cell_id_map[`${agent_pubkey}::${dna_hash}`];
+
+                return {
+                    "app_id":   ctx?.app_name || null,
+                    "role_id":  ctx?.role_name || null,
+                    "cell_id":  [ dna_hash, agent_pubkey ] as CellId,
+                };
+            })
+            .filter( cell_info => typeof app_id !== "string" || cell_info.app_id === app_id );
+    }
+
+    async listCellIds (
+        app_id      : Option<string>    = null,
+    ) : Promise<Array<CellId>> {
+        if ( typeof app_id !== "string" )
+	    return await this.listCells();
+
+        const cells                     = await this.listCellsWithContext( app_id );
+
+        return cells.map( cell_info => cell_info.cell_id );
+    }
+
+    async getCellId (
+        app_id      : string,
+        role_id     : string,
+    ) : Promise<CellId> {
+        const apps                      = await this.listApps();
+        const app                       = apps.find( app => app.installed_app_id === app_id );
+
+        if ( !app )
+            throw new Error(`App ID '${app_id}' not found`);
+
+        const role                      = app.roles[ role_id ];
+
+        if ( !role ) {
+            const roles                 = Object.keys( app.roles );
+            throw new Error(`App ID '${role_id}' not found in app ID '${app_id}'; available roles are: ${roles.join(", ")}`);
+        }
+
+        if ( !role.cell_id )
+            throw new Error(`Role '${role_id}' was found but the cell ID is null`);
+
+        return role.cell_id;
     }
 
     async listApps (
@@ -464,7 +533,7 @@ export class AdminClient {
     }
 
     async requestAgentInfo (
-	cell_id			: CellId = null,
+	cell_id			: Option<CellId> = null,
     ) {
 	const infos			= await this.#request("agent_info", {
 	    "cell_id": cell_id,
@@ -492,8 +561,11 @@ export class AdminClient {
 	secret		       ?: CapabilitySecret,
 	assignees	       ?: Array<AgentPubKey>,
     ) : Promise<boolean> {
-	if ( assignees !== undefined )
+	if ( assignees !== undefined ) {
+            if ( secret === undefined )
+                throw new TypeError(`Grant capability secret cannot be 'undefined'`);
 	    return await this.grantAssignedCapability( tag, agent, dna, functions, secret, assignees );
+        }
 	else if ( secret !== undefined )
 	    return await this.grantTransferableCapability( tag, agent, dna, functions, secret );
 	else

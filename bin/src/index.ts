@@ -16,6 +16,10 @@ import {
 }					from '../../lib/node.js';
 
 import {
+    ActionCallback,
+    SubProgramInit,
+}					from './types.js';
+import {
     print,
 }					from './utils.js';
 import agents_subprogram_init		from './agents.js';
@@ -65,10 +69,10 @@ export async function main ( argv ) {
     // Global 'verbosity' level for runtime
     let verbosity			= 0;
 
-    let admin;
-    let output;
+    let admin !: AdminClient;
+    let output : any;
 
-    function action_context ( action_callback ) {
+    function action_context ( action_callback : ActionCallback ) {
 	return async function ( ...args ) {
 	    // Ensure action results are used as the program output
 	    output			= await action_callback.call( this, {
@@ -76,7 +80,7 @@ export async function main ( argv ) {
 		admin,
 	    }, ...args );
 	};
-    }
+    };
 
     async function auto_help () {
 	if ( admin )
@@ -84,7 +88,7 @@ export async function main ( argv ) {
 	this.outputHelp();
     }
 
-    function initialize_subcommand ( subprogram_init ) {
+    function initialize_subcommand ( subprogram_init: SubProgramInit ) {
 	subprogram_init( program, action_context, auto_help )
     }
 
