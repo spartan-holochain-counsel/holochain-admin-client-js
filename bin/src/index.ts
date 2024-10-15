@@ -101,6 +101,7 @@ export async function main ( argv ) {
 	.option("-v, --verbose", "increase logging verbosity", increaseTotal, 0 )
 	.option("-q, --quiet", "suppress all printing except for final result", false )
 	.option("-p, --admin-port <port>", "set the admin port for connecting to the Holochain Conductor", parseInt )
+	.option("--origin <string>", "set the websocket origin value", "node" )
 	.addOption(
 	    (new Option(
 		"-t, --timeout <number>",
@@ -137,6 +138,9 @@ export async function main ( argv ) {
 	    // Setup the clients that all subcommands would use
 	    admin			= new AdminClient( opts.adminPort, {
 		"timeout":	opts.timeout,
+                "ws_options": {
+                    "origin":   opts.origin,
+                },
 	    });
 	})
 	// Control commander's output/error write behavior
