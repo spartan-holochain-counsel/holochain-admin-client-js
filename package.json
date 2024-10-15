@@ -1,6 +1,6 @@
 {
   "name": "@spartan-hc/holochain-admin-client",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "A Javascript client for communicating with Holochain's Admin Interface API",
   "type": "module",
   "main": "lib/node.js",
